@@ -6,16 +6,16 @@ Currently handles queries with optional column and table alias (no insert, updat
 
 #### Maven Dependency
 ````
-  <repositories>
-		<repository>
-		    <id>jitpack.io</id>
-		    <url>https://jitpack.io</url>
-		</repository>
-	</repositories>
+<repositories>
+	<repository>
+	    <id>jitpack.io</id>
+	    <url>https://jitpack.io</url>
+	</repository>
+</repositories>
   
-  <dependency>
-	    <groupId>com.github.McElroyMfg</groupId>
-	    <artifactId>salesforce-connector</artifactId>
-	    <version>a864be6f53</version>
-	</dependency>
+<dependency>
+    <groupId>com.github.McElroyMfg</groupId>
+    <artifactId>salesforce-connector</artifactId>
+    <version>a864be6f53</version>
+</dependency>
 ````
