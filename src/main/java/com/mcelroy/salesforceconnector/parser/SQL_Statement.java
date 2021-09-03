@@ -86,10 +86,12 @@ public abstract class SQL_Statement {
         check(" select  c.first as f,  c.last as l FROM contacts c where (l <= ? and f > ?) or something like '%blah'");
         check(" select  c.first as f,  c.last as l FROM contacts c where (l <= ? and (f > ? or g <= 3)) or something like '%blah'");
         check(" select  c.first as f,  c.last as l FROM contacts c where (l <= ? and (f > ? or g <= 3)) or something IN (123, 456)");
-        check(" select  c.first as f,  c.last as l FROM contacts c where (l + x <= ? and (f > ? or g <= 3 * y)) or something IN (123, 456) or somethingelse in (555,777)");
+        check(" select  c.first as f,  c.last as l FROM contacts c where (l + x <= ? and (f > ? or g <= 3 - y)) or something IN (123, 456) or somethingelse in (555,777)");
         check(" select  c.first as f,  c.last as l FROM contacts c where (l <= ? and (f > ? or g <= 3)) or something like '%blah' order by f, last desc");
         check(" select  c.first as f,  c.last as l FROM contacts c where l <= -4 limit 10");
         check(" select  c.first as f,  c.last as l FROM contacts c order by l desc limit 10 offset 5");
+        check(" select  c.first as f,  c.last as l FROM contacts c where dt < 2001-01-01");
+        check(" select  c.first as f,  c.last as l FROM contacts c where dt < 2001-01-01T10:18:06.000-0500 order by something desc");
 
     }
 

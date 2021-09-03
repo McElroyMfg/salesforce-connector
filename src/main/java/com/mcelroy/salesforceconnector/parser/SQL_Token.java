@@ -5,6 +5,8 @@ package com.mcelroy.salesforceconnector.parser;
 import com.mcelroy.salesforceconnector.parser.exception.ExpectedException;
 import com.mcelroy.salesforceconnector.parser.exception.MissingException;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.*;
 
 public class SQL_Token {
@@ -187,6 +189,30 @@ public class SQL_Token {
                 tokenStart = i; // negative number
             } else if (c == '=' || c == '!' || c == '<' || c == '>' || c == '(' || c == ')' || c == ',' ||
                     c == '*' || c == '/' || c == '-' || c == '+') {
+                if (c == '-' && tokenStart >= 0 && i - tokenStart == 4) {
+                    // check if we have a date
+                    StringBuilder b = new StringBuilder(27);
+                    for (int j = tokenStart; j < chars.length && j < tokenStart + 28 && !Character.isWhitespace(chars[j]); j++)
+                        b.append(chars[j]);
+                    if (b.length() == 10) {
+                        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+                        try {
+                            Date d = sdf.parse(b.toString());
+                            i = tokenStart + 9;
+                            continue;
+                        } catch (ParseException e) {
+                        }
+                    } else if (b.length() == 28) {
+                        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
+                        try {
+                            Date d = sdf.parse(b.toString());
+                            i = tokenStart + 27;
+                            continue;
+                        } catch (ParseException e) {
+                        }
+                    }
+                }
+
                 if (tokenStart >= 0) {
                     tokens.add(new SQL_Token(chars, tokenStart, i));
                     tokenStart = -1;
