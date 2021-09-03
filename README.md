@@ -6,20 +6,15 @@ Currently handles queries with optional column and table alias (no insert, updat
 
 #### Example Usage
 ````Java
-public class Example {
     public static void main(String[] args) {
-        String url = "jdbc:sf:https://<your_company>.my.salesforce.com";
-        String clientId = "<...>";
-        String clientSecret = "<...>";
-        String user = "<...>";
-        String password = "<...>";
+        String url = System.getProperty("url", "jdbc:sf:https://<your_company>.my.salesforce.com");
 
         Driver d = new SFDriver();
         Properties p = new Properties();
-        p.setProperty("clientId", clientId);
-        p.setProperty("clientSecret", clientSecret);
-        p.setProperty("user", user);
-        p.setProperty("password", password);
+        p.setProperty("clientId", System.getProperty("clientId"));
+        p.setProperty("clientSecret", System.getProperty("clientSecret"));
+        p.setProperty("user", System.getProperty("user"));
+        p.setProperty("password", System.getProperty("password"));
 
         try {
             Connection c = d.connect(url, p);
@@ -39,7 +34,39 @@ public class Example {
             throwables.printStackTrace();
         }
     }
-}
+````
+
+#### Example Hibernate Usage
+````Java
+    public static void main(String[] args) {
+        String url = System.getProperty("url", "jdbc:sf:https://<your_company>.my.salesforce.com");
+
+        Properties p = new Properties();
+        p.setProperty("hibernate.connection.clientId", System.getProperty("clientId"));
+        p.setProperty("hibernate.connection.clientSecret", System.getProperty("clientSecret"));
+        p.setProperty("hibernate.connection.user", System.getProperty("user"));
+        p.setProperty("hibernate.connection.password", System.getProperty("password"));
+        p.setProperty("hibernate.connection.url", url);
+        p.setProperty("hibernate.dialect", "com.mcelroy.salesforceconnector.jdbc.SFDialect");
+        p.setProperty("hibernate.show_sql", "true");
+
+        SessionFactory sf = new AnnotationConfiguration().addAnnotatedClass(Account.class).addProperties(p).buildSessionFactory();
+        Session s = sf.openSession();
+
+        Criteria c = s.createCriteria(Account.class);
+        c.add(Restrictions.like("name", "Mc%"));
+        for (Account a : (List<Account>) c.list()) {
+            System.out.println(a.id + ' ' + a.name);
+        }
+    }
+
+    @Entity
+    @Table(name = "Account")
+    public static class Account {
+        @Id
+        public String id;
+        public String name;
+    }
 ````
 
 #### Maven Dependency
