@@ -16,6 +16,8 @@ public class SQL_SelectStatement extends SQL_Statement {
 
     protected SQL_Expression where;
     protected List<SQL_OrderColumn> orderColumns;
+    protected String limit;
+    protected String offset;
 
 
     protected SQL_SelectStatement(SQL_Token.SQL_TokenIterator tokenIterator) {
@@ -56,6 +58,8 @@ public class SQL_SelectStatement extends SQL_Statement {
 
             if (t.is(WHERE))
                 parseWhere(tokenIterator);
+            else if (t.is(ORDER))
+                parseOrder(tokenIterator);
             else
                 throw new ExpectedException(t, WHERE.toString());
         }
@@ -119,7 +123,16 @@ public class SQL_SelectStatement extends SQL_Statement {
     }
 
     protected void parseLimit(SQL_Token.SQL_TokenIterator tokenIterator) {
-        throw new RuntimeException("Not Implemented");
+        SQL_Token t = tokenIterator.get("limit value");
+        limit = t.value;
+        if (tokenIterator.hasNext()) {
+            t = tokenIterator.peek();
+            if (t.is(OFFSET)) {
+                tokenIterator.next(); //skip peek
+                t = tokenIterator.get("offset value");
+                offset = t.value;
+            }
+        }
     }
 
     @Override
@@ -161,6 +174,11 @@ public class SQL_SelectStatement extends SQL_Statement {
                 b.append(c.toSQL(config));
             }
         }
+
+        if (limit != null)
+            b.append(" LIMIT ").append(limit);
+        if (offset != null)
+            b.append(" OFFSET ").append(offset);
 
         return b.toString();
     }
