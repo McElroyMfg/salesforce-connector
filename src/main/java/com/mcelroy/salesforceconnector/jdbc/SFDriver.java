@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 package com.mcelroy.salesforceconnector.jdbc;
 
-import com.mcelroy.salesforceconnector.rest.SalesForceClient;
+import com.mcelroy.salesforceconnector.rest.SFClient;
 
 import java.sql.*;
 import java.util.HashMap;
@@ -11,7 +11,7 @@ import java.util.Properties;
 import java.util.logging.Logger;
 
 public class SFDriver implements Driver {
-    private static Map<String, SalesForceClient> clients = new HashMap<>();
+    private static Map<String, SFClient> clients = new HashMap<>();
 
     @Override
     public Connection connect(String s, Properties properties) throws SQLException {
@@ -24,11 +24,11 @@ public class SFDriver implements Driver {
             String clientId = properties.getProperty("clientId");
             String clientSecret = properties.getProperty("clientSecret");
             String key = url + user + clientId;
-            SalesForceClient client;
+            SFClient client;
             synchronized (clients) {
                 client = clients.get(key);
                 if (client == null) {
-                    client = new SalesForceClient(url, clientId, clientSecret, user, password);
+                    client = new SFClient(url, clientId, clientSecret, user, password);
                     clients.put(key, client);
                 }
             }

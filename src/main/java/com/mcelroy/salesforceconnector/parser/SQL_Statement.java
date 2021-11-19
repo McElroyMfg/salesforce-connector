@@ -13,9 +13,9 @@ public abstract class SQL_Statement {
     public enum StatementType {SELECT, UPDATE, INSERT, DELETE}
 
     protected StatementType type;
-    protected String tableName;
+    public String tableName;
     protected String tableAlias;
-    protected List<SQL_Column> columns = new ArrayList<>();
+    public List<SQL_Column> columns = new ArrayList<>();
 
 
     public static SQL_Statement parse(String statement) {

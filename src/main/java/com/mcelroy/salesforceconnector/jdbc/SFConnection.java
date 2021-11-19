@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 package com.mcelroy.salesforceconnector.jdbc;
 
-import com.mcelroy.salesforceconnector.rest.SalesForceAPI;
-import com.mcelroy.salesforceconnector.rest.SalesForceClient;
+import com.mcelroy.salesforceconnector.rest.SFClient;
+import com.mcelroy.salesforceconnector.rest.SFClientConnection;
 
 import java.sql.*;
 import java.util.Map;
@@ -11,30 +11,30 @@ import java.util.Properties;
 import java.util.concurrent.Executor;
 
 public class SFConnection implements Connection {
-    SalesForceClient client;
+    SFClient client;
     String environment = null;
 
-    public SFConnection(SalesForceClient client) {
+    public SFConnection(SFClient client) {
         this.client = client;
     }
 
-    public SalesForceAPI.Connection getApiConnection() {
+    public SFClientConnection getClientConnection() {
         return client.getConnection(environment);
     }
 
     @Override
     public Statement createStatement() throws SQLException {
-        return new SFStatement(this, getApiConnection());
+        return new SFStatement(this, getClientConnection());
     }
 
     @Override
     public PreparedStatement prepareStatement(String s) throws SQLException {
-        return new SFPreparedStatement(this, getApiConnection(), s);
+        return new SFPreparedStatement(this, getClientConnection(), s);
     }
 
     @Override
     public CallableStatement prepareCall(String s) throws SQLException {
-        return new SFCallableStatement(this, getApiConnection(), s);
+        return new SFCallableStatement(this, getClientConnection(), s);
     }
 
     @Override

@@ -4,7 +4,7 @@ package com.mcelroy.salesforceconnector.jdbc;
 
 import com.mcelroy.salesforceconnector.parser.SQL_Config;
 import com.mcelroy.salesforceconnector.parser.SQL_Statement;
-import com.mcelroy.salesforceconnector.rest.SalesForceAPI;
+import com.mcelroy.salesforceconnector.rest.SFClientConnection;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -14,13 +14,13 @@ import java.util.List;
 
 public class SFStatement implements Statement {
     SFConnection sfConnection;
-    SalesForceAPI.Connection apiConnection;
+    SFClientConnection apiConnection;
     ResultSet resultSet;
     List<String> batch = new ArrayList<>();
     SQL_Statement sql_statement;
     String nextResultSet = null;
 
-    public SFStatement(SFConnection sfConnection, SalesForceAPI.Connection apiConnection) {
+    public SFStatement(SFConnection sfConnection, SFClientConnection apiConnection) {
         this.sfConnection = sfConnection;
         this.apiConnection = apiConnection;
     }

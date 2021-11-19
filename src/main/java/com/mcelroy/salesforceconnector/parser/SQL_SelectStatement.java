@@ -14,10 +14,10 @@ import static com.mcelroy.salesforceconnector.parser.SQL_Token.TokenType.WORD;
 
 public class SQL_SelectStatement extends SQL_Statement {
 
-    protected SQL_Expression where;
-    protected List<SQL_OrderColumn> orderColumns;
-    protected String limit;
-    protected String offset;
+    public SQL_Expression where;
+    public List<SQL_OrderColumn> orderColumns;
+    public String limit;
+    public String offset;
 
 
     protected SQL_SelectStatement(SQL_Token.SQL_TokenIterator tokenIterator) {

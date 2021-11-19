@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 package com.mcelroy.salesforceconnector.jdbc;
 
-import com.mcelroy.salesforceconnector.rest.SalesForceAPI;
+import com.mcelroy.salesforceconnector.rest.SFClientConnection;
 
 import java.io.InputStream;
 import java.io.Reader;
@@ -18,7 +18,7 @@ public class SFPreparedStatement extends SFStatement implements PreparedStatemen
     String sql;
     Map<Integer, String> params = new HashMap<>();
 
-    public SFPreparedStatement(SFConnection sfConnection, SalesForceAPI.Connection apiConnection, String sql) {
+    public SFPreparedStatement(SFConnection sfConnection, SFClientConnection apiConnection, String sql) {
         super(sfConnection, apiConnection);
         this.sql = sql;
     }

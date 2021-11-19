@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: MIT
 package com.mcelroy.salesforceconnector.jdbc;
 
+import com.mcelroy.salesforceconnector.rest.SFClientConnection;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.json.JSONString;
-import com.mcelroy.salesforceconnector.rest.SalesForceAPI;
 
 import java.io.InputStream;
 import java.io.Reader;
@@ -19,7 +19,7 @@ public class SFCallableStatement extends SFPreparedStatement implements Callable
     List<String> inputNames = new ArrayList<>();
     String flowName;
 
-    public SFCallableStatement(SFConnection sfConnection, SalesForceAPI.Connection apiConnection, String sql) {
+    public SFCallableStatement(SFConnection sfConnection, SFClientConnection apiConnection, String sql) {
         super(sfConnection, apiConnection, sql);
         int callIdx = sql.indexOf("call ");
         if (callIdx < 0)
