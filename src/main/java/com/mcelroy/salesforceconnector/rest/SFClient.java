@@ -39,7 +39,7 @@ public class SFClient {
         } else {
             SFRestConnection.SFRestConfig config = sandboxes.get(sandboxName);
             if (config == null) {
-                String sbHost = host.replaceFirst("\\.", "--" + sandboxName + ".");
+                String sbHost = host.replaceFirst("\\.", "--" + sandboxName + ".sandbox."); // SF domain change required summer 2022
                 String sbUser = user + "." + sandboxName;
                 config = new SFRestConnection.SFRestConfig(sbHost, clientId, clientSecret, sbUser, pass);
                 sandboxes.put(sandboxName, config);
