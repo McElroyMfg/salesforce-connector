@@ -60,6 +60,8 @@ public class SQL_SelectStatement extends SQL_Statement {
                 parseWhere(tokenIterator);
             else if (t.is(ORDER))
                 parseOrder(tokenIterator);
+            else if(t.is(LIMIT))
+                parseLimit(tokenIterator);
             else
                 throw new ExpectedException(t, WHERE.toString());
         }
