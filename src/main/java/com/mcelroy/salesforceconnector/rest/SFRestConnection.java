@@ -10,6 +10,7 @@ import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -220,7 +221,10 @@ public class SFRestConnection {
             restResponse.response = sb.toString();
             if (status >= 400)
                 restResponse.isError = true;
-        } catch (Exception e) {
+        } catch (UnknownHostException e) {
+            restResponse.isError = true;
+            restResponse.response = "Unknown host: " + e.getMessage();
+        }catch (Exception e) {
             restResponse.isError = true;
             restResponse.response = e.getMessage();
         }

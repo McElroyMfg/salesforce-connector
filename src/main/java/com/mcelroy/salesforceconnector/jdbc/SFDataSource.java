@@ -110,4 +110,8 @@ public class SFDataSource implements DataSource {
     public void setPassword(String password) {
         this.password = password;
     }
+
+    static {
+        SFDriver d = new SFDriver(); // make sure loaded and registered if container doesn't support JNDI auto registration
+    }
 }
