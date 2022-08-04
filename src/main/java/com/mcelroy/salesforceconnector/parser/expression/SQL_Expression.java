@@ -50,8 +50,8 @@ public abstract class SQL_Expression {
                 }
             }
 
-            if (op == null && !p.is(OPERATOR))
-                throw new MissingException(tokenIterator.current(), "operator");
+//            if (op == null && !p.is(OPERATOR))
+//                throw new MissingException(tokenIterator.current(), "operator");
             return e;
         } else {
             throw new MissingException(tokenIterator.current(), "expression");

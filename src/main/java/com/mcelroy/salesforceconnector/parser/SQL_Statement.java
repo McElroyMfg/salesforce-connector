@@ -92,7 +92,7 @@ public abstract class SQL_Statement {
         check(" select  c.first as f,  c.last as l FROM contacts c order by l desc limit 10 offset 5");
         check(" select  c.first as f,  c.last as l FROM contacts c where dt < 2001-01-01");
         check(" select  c.first as f,  c.last as l FROM contacts c where dt < 2001-01-01T10:18:06.000-0500 order by something desc");
-
+        check("select this_.Name as y0_, this_.Date_Prepared__c as y1_, this_.Expiration_Date__c as y2_, this_.Stage__c as y3_, this_.Comments__c as y4_, this_.Account_Name__r.Name as y5_, this_.Customer_Number__c as y6_, this_.Company_Name__c as y7_ from Return_Order__c this_ where (this_.Account_Name__r.AS400EXID__c=? or y6_=?) order by y0_ desc");
     }
 
     public static void check(String sql) {
