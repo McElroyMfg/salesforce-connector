@@ -140,16 +140,19 @@ public class SFResultSet implements ResultSet {
     }
 
     private String getDottedString(JSONObject object, String[] path) throws SQLException {
-        try {
-            for (int i = 0; i < path.length - 1; i++)
-                object = object.getJSONObject(getKey(object, path[i]));
-        } catch (JSONException e) {
-            throw new SQLException(e);
+        for (int i = 0; i < path.length - 1; i++) {
+            if(object != null)
+                object = object.optJSONObject(getKey(object, path[i]));
         }
 
-        String v = object.optString(getKey(object, path[path.length - 1]), null);
-        wasNull = v == null || v.trim().toLowerCase().equals("null");
-        return v;
+        if(object != null) {
+            String v = object.optString(getKey(object, path[path.length - 1]), null);
+            wasNull = v == null || v.trim().toLowerCase().equals("null");
+            return v;
+        }else{
+            wasNull = true;
+            return null;
+        }
     }
 
     private String getKey(JSONObject object, String s) throws SQLException {
