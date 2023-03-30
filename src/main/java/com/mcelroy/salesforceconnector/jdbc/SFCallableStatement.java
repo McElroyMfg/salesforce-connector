@@ -113,6 +113,9 @@ public class SFCallableStatement extends SFPreparedStatement implements Callable
             }
             params.put(i - 1, a.toString());
             return;
+        }else if(Map.class.isInstance(o)){
+            JSONObject obj = new JSONObject(o);
+            params.put(i-1, obj.toString());
         }
         throw new SQLFeatureNotSupportedException("Object type not Supported");
     }
