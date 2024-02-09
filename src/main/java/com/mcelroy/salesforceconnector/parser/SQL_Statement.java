@@ -68,6 +68,27 @@ public abstract class SQL_Statement {
         return null;
     }
 
+    public String getSelectColumnName(int n){
+        int i = 1;
+        for(SQL_Column c : columns){
+            if(c.type == SQL_Column.ColumnType.SELECT){
+                if(i == n)
+                    return c.name;
+                i++;
+            }
+        }
+        return null;
+    }
+
+    public int getSelectColumnCount(){
+        int i = 0;
+        for(SQL_Column c : columns){
+            if(c.type == SQL_Column.ColumnType.SELECT)
+                i++;
+        }
+        return i;
+    }
+
     public void addColumn(SQL_Column col) {
         columns.add(col);
     }

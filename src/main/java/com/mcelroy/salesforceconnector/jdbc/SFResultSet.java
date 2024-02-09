@@ -47,84 +47,96 @@ public class SFResultSet implements ResultSet {
         return wasNull;
     }
 
+    private String getColumnName(int i) throws SQLException{
+        if (statement.sql_statement != null) {
+            String name = statement.sql_statement.getSelectColumnName(i);
+            if (name != null)
+                return name;
+            else
+                throw new SQLException("Invalid column index: " + i);
+        }
+
+        throw new SQLException("No active SQL statement");
+    }
+
     @Override
     public String getString(int i) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        return getString(getColumnName(i));
     }
 
     @Override
     public boolean getBoolean(int i) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        return getBoolean(getColumnName(i));
     }
 
     @Override
     public byte getByte(int i) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        return getByte(getColumnName(i));
     }
 
     @Override
     public short getShort(int i) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        return getShort(getColumnName(i));
     }
 
     @Override
     public int getInt(int i) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        return getInt(getColumnName(i));
     }
 
     @Override
     public long getLong(int i) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        return getLong(getColumnName(i));
     }
 
     @Override
     public float getFloat(int i) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        return getFloat(getColumnName(i));
     }
 
     @Override
     public double getDouble(int i) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        return getDouble(getColumnName(i));
     }
 
     @Override
     public BigDecimal getBigDecimal(int i, int i1) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        return getBigDecimal(getColumnName(i));
     }
 
     @Override
     public byte[] getBytes(int i) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        return getBytes(getColumnName(i));
     }
 
     @Override
     public Date getDate(int i) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        return getDate(getColumnName(i));
     }
 
     @Override
     public Time getTime(int i) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        return getTime(getColumnName(i));
     }
 
     @Override
     public Timestamp getTimestamp(int i) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        return getTimestamp(getColumnName(i));
     }
 
     @Override
     public InputStream getAsciiStream(int i) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        return getAsciiStream(getColumnName(i));
     }
 
     @Override
     public InputStream getUnicodeStream(int i) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        return getUnicodeStream(getColumnName(i));
     }
 
     @Override
     public InputStream getBinaryStream(int i) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        return getBinaryStream(getColumnName(i));
     }
 
     @Override
@@ -303,12 +315,12 @@ public class SFResultSet implements ResultSet {
 
     @Override
     public ResultSetMetaData getMetaData() throws SQLException {
-        return null;
+        return new SFResultSetMetaData(statement);
     }
 
     @Override
     public Object getObject(int i) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        return getObject(getColumnName(i));
     }
 
     @Override
@@ -333,7 +345,7 @@ public class SFResultSet implements ResultSet {
 
     @Override
     public BigDecimal getBigDecimal(int i) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        return getBigDecimal(getColumnName(i));
     }
 
     @Override
@@ -742,7 +754,7 @@ public class SFResultSet implements ResultSet {
 
     @Override
     public Date getDate(int i, Calendar calendar) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        return getDate(getColumnName(i), calendar);
     }
 
     @Override
@@ -752,7 +764,7 @@ public class SFResultSet implements ResultSet {
 
     @Override
     public Time getTime(int i, Calendar calendar) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        return getTime(getColumnName(i), calendar);
     }
 
     @Override
@@ -762,7 +774,7 @@ public class SFResultSet implements ResultSet {
 
     @Override
     public Timestamp getTimestamp(int i, Calendar calendar) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        return getTimestamp(getColumnName(i), calendar);
     }
 
     @Override
@@ -772,7 +784,7 @@ public class SFResultSet implements ResultSet {
 
     @Override
     public URL getURL(int i) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        return getURL(getColumnName(i));
     }
 
     @Override
@@ -906,7 +918,7 @@ public class SFResultSet implements ResultSet {
 
     @Override
     public String getNString(int i) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        return getNString(getColumnName(i));
     }
 
     @Override

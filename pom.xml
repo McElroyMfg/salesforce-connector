@@ -4,7 +4,7 @@
     <groupId>com.mcelroy</groupId>
     <artifactId>salesforce-connector</artifactId>
     <packaging>jar</packaging>
-    <version>1.4</version>
+    <version>1.5</version>
 
     <name>Salesforce Connector</name>
 
