@@ -17,9 +17,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 public class SFRestConnection {
-    static {
-        SFRestConnection.allowMethods("PATCH");
-    }
 
     private static class SFRestResponse {
         public boolean authException = false;
@@ -125,7 +122,8 @@ public class SFRestConnection {
 
 
     public JSONObject patchJSON(String urlString, String data) throws Exception {
-        return sendJSON("PATCH", urlString, data);
+        // Fix for Java not supporting PATCH
+        return sendJSON("POST", urlString + "?_HttpMethod=PATCH", data);
     }
 
 
@@ -265,28 +263,5 @@ public class SFRestConnection {
             return paramString.toString();
         }
         return "";
-    }
-
-
-    // Fix HttpURLConnection to allow PATCH http method
-    private static void allowMethods(String... methods) {
-        try {
-            Field methodsField = HttpURLConnection.class.getDeclaredField("methods");
-
-            Field modifiersField = Field.class.getDeclaredField("modifiers");
-            modifiersField.setAccessible(true);
-            modifiersField.setInt(methodsField, methodsField.getModifiers() & ~Modifier.FINAL);
-
-            methodsField.setAccessible(true);
-
-            String[] oldMethods = (String[]) methodsField.get(null);
-            Set<String> methodsSet = new LinkedHashSet<>(Arrays.asList(oldMethods));
-            methodsSet.addAll(Arrays.asList(methods));
-            String[] newMethods = methodsSet.toArray(new String[0]);
-
-            methodsField.set(null/*static field*/, newMethods);
-        } catch (NoSuchFieldException | IllegalAccessException e) {
-            throw new IllegalStateException(e);
-        }
     }
 }
