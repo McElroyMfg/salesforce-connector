@@ -7,15 +7,20 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.*;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.*;
 
 public class SFRestConnection {
+    static {
+        SFRestConnection.allowMethods("PATCH");
+    }
+
     private static class SFRestResponse {
         public boolean authException = false;
         public boolean isError = false;
@@ -115,25 +120,37 @@ public class SFRestConnection {
 
 
     public JSONObject postJSON(String urlString, String data) throws Exception {
+        return sendJSON("POST", urlString, data);
+    }
+
+
+    public JSONObject patchJSON(String urlString, String data) throws Exception {
+        return sendJSON("PATCH", urlString, data);
+    }
+
+
+    private JSONObject sendJSON(String method, String urlString, String data) throws Exception {
         SFRestResponse restResponse;
         int tries = 0;
         do {
-            restResponse = post(urlString, "application/json", data);
+            restResponse = send(method, urlString, "application/json", data);
             if (restResponse.authException)
                 connect();
             else if (restResponse.isError)
                 throw new Exception(restResponse.response);
             else {
-                try {
+                if (restResponse.response.startsWith("{"))
                     return new JSONObject(restResponse.response);
-                } catch (Exception e) {
+                else if (restResponse.response.startsWith("[")) {
                     JSONArray a = new JSONArray(restResponse.response);
                     return a.getJSONObject(0);
-                }
+                } else
+                    return null;
             }
         } while (++tries < 2);
         throw new Exception(restResponse.response);
     }
+
 
     private SFRestResponse logIn(String urlString, String acceptType, Map<String, Object> params) {
         Map<String, String> headers = new LinkedHashMap<>();
@@ -152,15 +169,17 @@ public class SFRestConnection {
         return call("POST", acceptType, urlString, headers, postDataBytes);
     }
 
-    private SFRestResponse post(String urlString, String acceptType, String data) {
+
+    private SFRestResponse send(String method, String urlString, String acceptType, String data) {
         Map<String, String> headers = new LinkedHashMap<>();
         byte[] postDataBytes = null;
         headers.put("Content-Type", "application/json");
         if (data != null) {
             postDataBytes = data.getBytes(StandardCharsets.UTF_8);
         }
-        return call("POST", acceptType, urlString, headers, postDataBytes);
+        return call(method, acceptType, urlString, headers, postDataBytes);
     }
+
 
     private SFRestResponse get(String urlString, String acceptType, Map<String, Object> params) {
         if (params != null) {
@@ -178,6 +197,7 @@ public class SFRestConnection {
         }
         return call("GET", acceptType, urlString, null, null);
     }
+
 
     private SFRestResponse call(String method, String acceptType, String urlString, Map<String, String> headers, byte[] data) {
         SFRestResponse restResponse = new SFRestResponse();
@@ -224,13 +244,14 @@ public class SFRestConnection {
         } catch (UnknownHostException e) {
             restResponse.isError = true;
             restResponse.response = "Unknown host: " + e.getMessage();
-        }catch (Exception e) {
+        } catch (Exception e) {
             restResponse.isError = true;
             restResponse.response = e.getMessage();
         }
 
         return restResponse;
     }
+
 
     private String buildParamString(Map<String, Object> params) throws UnsupportedEncodingException {
         if (params != null) {
@@ -247,4 +268,25 @@ public class SFRestConnection {
     }
 
 
+    // Fix HttpURLConnection to allow PATCH http method
+    private static void allowMethods(String... methods) {
+        try {
+            Field methodsField = HttpURLConnection.class.getDeclaredField("methods");
+
+            Field modifiersField = Field.class.getDeclaredField("modifiers");
+            modifiersField.setAccessible(true);
+            modifiersField.setInt(methodsField, methodsField.getModifiers() & ~Modifier.FINAL);
+
+            methodsField.setAccessible(true);
+
+            String[] oldMethods = (String[]) methodsField.get(null);
+            Set<String> methodsSet = new LinkedHashSet<>(Arrays.asList(oldMethods));
+            methodsSet.addAll(Arrays.asList(methods));
+            String[] newMethods = methodsSet.toArray(new String[0]);
+
+            methodsField.set(null/*static field*/, newMethods);
+        } catch (NoSuchFieldException | IllegalAccessException e) {
+            throw new IllegalStateException(e);
+        }
+    }
 }

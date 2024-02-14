@@ -12,18 +12,17 @@ import java.math.BigDecimal;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.sql.*;
+import java.sql.Date;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.Calendar;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class SFResultSet implements ResultSet {
     SFStatement statement;
     private List<JSONObject> rows;
     private int currentRow = -1;
     private boolean wasNull = true;
+    private Map<String, Object> updateRow = new HashMap<>();
 
     public SFResultSet(SFStatement s, List<JSONObject> result) {
         this.statement = s;
@@ -32,6 +31,7 @@ public class SFResultSet implements ResultSet {
 
     @Override
     public boolean next() throws SQLException {
+        updateRow.clear();
         if (currentRow < rows.size())
             currentRow++;
         return currentRow >= 0 && currentRow < rows.size();
@@ -375,11 +375,13 @@ public class SFResultSet implements ResultSet {
 
     @Override
     public void beforeFirst() throws SQLException {
+        updateRow.clear();
         currentRow = -1;
     }
 
     @Override
     public void afterLast() throws SQLException {
+        updateRow.clear();
         currentRow = rows.size();
     }
 
@@ -408,6 +410,7 @@ public class SFResultSet implements ResultSet {
 
     @Override
     public boolean absolute(int i) throws SQLException {
+        updateRow.clear();
         if (i > 0 && i <= rows.size()) {
             currentRow = i + -1;
             return true;
@@ -417,11 +420,13 @@ public class SFResultSet implements ResultSet {
 
     @Override
     public boolean relative(int i) throws SQLException {
+        updateRow.clear();
         return absolute(currentRow + i);
     }
 
     @Override
     public boolean previous() throws SQLException {
+        updateRow.clear();
         if (currentRow >= 0)
             currentRow--;
         return currentRow >= 0 && currentRow < rows.size();
@@ -474,167 +479,178 @@ public class SFResultSet implements ResultSet {
 
     @Override
     public void updateNull(int i) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        updateNull(getColumnName(i));
     }
 
     @Override
     public void updateBoolean(int i, boolean b) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        updateBoolean(getColumnName(i), b);
     }
 
     @Override
     public void updateByte(int i, byte b) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        updateByte(getColumnName(i), b);
     }
 
     @Override
     public void updateShort(int i, short i1) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        updateShort(getColumnName(i), i1);
     }
 
     @Override
     public void updateInt(int i, int i1) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        updateInt(getColumnName(i), i1);
     }
 
     @Override
     public void updateLong(int i, long l) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        updateLong(getColumnName(i), l);
     }
 
     @Override
     public void updateFloat(int i, float v) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        updateFloat(getColumnName(i), v);
     }
 
     @Override
     public void updateDouble(int i, double v) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        updateDouble(getColumnName(i), v);
     }
 
     @Override
     public void updateBigDecimal(int i, BigDecimal bigDecimal) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        updateBigDecimal(getColumnName(i), bigDecimal);
     }
 
     @Override
     public void updateString(int i, String s) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        updateString(getColumnName(i), s);
     }
 
     @Override
     public void updateBytes(int i, byte[] bytes) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        updateBytes(getColumnName(i), bytes);
     }
 
     @Override
     public void updateDate(int i, Date date) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+       updateDate(getColumnName(i), date);
     }
 
     @Override
     public void updateTime(int i, Time time) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        updateTime(getColumnName(i), time);
     }
 
     @Override
     public void updateTimestamp(int i, Timestamp timestamp) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        updateTimestamp(getColumnName(i), timestamp);
     }
 
     @Override
     public void updateAsciiStream(int i, InputStream inputStream, int i1) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        updateAsciiStream(getColumnName(i), inputStream, i1);
     }
 
     @Override
     public void updateBinaryStream(int i, InputStream inputStream, int i1) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        updateBinaryStream(getColumnName(i), inputStream, i1);
     }
 
     @Override
     public void updateCharacterStream(int i, Reader reader, int i1) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        updateCharacterStream(getColumnName(i), reader, i1);
     }
 
     @Override
     public void updateObject(int i, Object o, int i1) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        updateObject(getColumnName(i), o, i1);
     }
 
     @Override
     public void updateObject(int i, Object o) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        updateObject(getColumnName(i), o);
     }
 
     @Override
     public void updateNull(String s) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        updateRow.put(s, null);
     }
 
     @Override
     public void updateBoolean(String s, boolean b) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        updateRow.put(s, b ? "true" : "false");
     }
 
     @Override
     public void updateByte(String s, byte b) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        updateRow.put(s, "" + b);
     }
 
     @Override
     public void updateShort(String s, short i) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        updateLong(s, i);
     }
 
     @Override
     public void updateInt(String s, int i) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        updateLong(s, i);
     }
 
     @Override
     public void updateLong(String s, long l) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        updateRow.put(s, l);
     }
 
     @Override
     public void updateFloat(String s, float v) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        updateDouble(s, v);
     }
 
     @Override
     public void updateDouble(String s, double v) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        updateRow.put(s, v);
     }
 
     @Override
     public void updateBigDecimal(String s, BigDecimal bigDecimal) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        if (bigDecimal == null)
+            updateNull(s);
+        updateRow.put(s, bigDecimal);
     }
 
     @Override
     public void updateString(String s, String s1) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        updateRow.put(s, s1);
     }
 
     @Override
     public void updateBytes(String s, byte[] bytes) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        updateRow.put(s, "" + bytes);
     }
 
     @Override
     public void updateDate(String s, Date date) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        if (date == null)
+            updateNull(s);
+        else
+            updateRow.put(s, SFPreparedStatement.formatDate(date, "yyyy-MM-dd"));
     }
 
     @Override
     public void updateTime(String s, Time time) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        if (time == null)
+            updateNull(s);
+        else
+            updateRow.put(s, SFPreparedStatement.formatDate(time, "yyyy-MM-dd'T'HH:mm:ss.SSSZ"));
     }
 
     @Override
     public void updateTimestamp(String s, Timestamp timestamp) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        if (timestamp == null)
+            updateNull(s);
+        else
+            updateRow.put(s, SFPreparedStatement.formatDate(timestamp, "yyyy-MM-dd'T'HH:mm:ss.SSSZ"));
     }
 
     @Override
@@ -669,7 +685,13 @@ public class SFResultSet implements ResultSet {
 
     @Override
     public void updateRow() throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        String id = getString("id");
+        if(id == null)
+            throw new SQLException("Can not update record. Selected columns do not include id field.");
+        String table = statement.sql_statement.tableName;
+        JSONObject jo = new JSONObject(updateRow);
+        statement.apiConnection.update(table + "/"  + id, jo.toString());
+        updateRow.clear();
     }
 
     @Override
@@ -684,12 +706,12 @@ public class SFResultSet implements ResultSet {
 
     @Override
     public void cancelRowUpdates() throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        updateRow.clear();
     }
 
     @Override
     public void moveToInsertRow() throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        afterLast();
     }
 
     @Override
@@ -868,12 +890,12 @@ public class SFResultSet implements ResultSet {
 
     @Override
     public void updateNString(int i, String s) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        updateNString(getColumnName(i), s);
     }
 
     @Override
     public void updateNString(String s, String s1) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        updateString(s, s1);
     }
 
     @Override

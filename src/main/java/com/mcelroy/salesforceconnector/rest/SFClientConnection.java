@@ -100,6 +100,16 @@ public class SFClientConnection {
     }
 
 
+    public JSONObject update(String object, String statement) {
+        try {
+            return connection.patchJSON(connection.getServiceUrl() + "sobjects/" + object, statement);
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
+        }
+    }
+
+
     public JSONObject launchFlow(String flowName, String statement) {
         try {
             return connection.postJSON(connection.getServiceUrl() + "actions/custom/flow/" + flowName, statement);

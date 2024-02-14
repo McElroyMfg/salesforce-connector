@@ -113,7 +113,7 @@ public class SFPreparedStatement extends SFStatement implements PreparedStatemen
         setString(i, "" + bytes);
     }
 
-    public String formatDate(java.util.Date date, String fmt) {
+    public static String formatDate(java.util.Date date, String fmt) {
         SimpleDateFormat df = new SimpleDateFormat(fmt);
         return df.format(date);
     }
