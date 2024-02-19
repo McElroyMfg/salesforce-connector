@@ -670,17 +670,47 @@ public class SFResultSet implements ResultSet {
 
     @Override
     public void updateObject(String s, Object o, int i) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        updateObject(s, o);
     }
 
     @Override
     public void updateObject(String s, Object o) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        if(o == null)
+            updateNull(s);
+        else if(o instanceof String)
+            updateString(s, (String)o);
+        else if(o instanceof BigDecimal)
+            updateBigDecimal(s, (BigDecimal)o);
+        else if(o instanceof Long)
+            updateLong(s, (Long)o);
+        else if(o instanceof Double)
+            updateDouble(s, (Double)o);
+        else if(o instanceof Boolean)
+            updateBoolean(s, (Boolean)o);
+        else if(o instanceof Timestamp)
+            updateTimestamp(s, (Timestamp)o);
+        else if(o instanceof Time)
+            updateTime(s, (Time)o);
+        else if(o instanceof Date)
+            updateDate(s, (Date)o);
+        else if(o instanceof java.util.Date)
+            updateDate(s, new Date(((java.util.Date)o).getTime()));
+        else if(o instanceof Short)
+            updateShort(s, (Short)o);
+        else if(o instanceof Integer)
+            updateInt(s, (Integer)o);
+        else if(o instanceof Float)
+            updateFloat(s, (Float)o);
+        else
+            updateString(s, o.toString());
     }
 
     @Override
     public void insertRow() throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        String table = statement.sql_statement.tableName;
+        JSONObject jo = new JSONObject(updateRow);
+        statement.apiConnection.insert(table, jo.toString());
+        updateRow.clear();
     }
 
     @Override
@@ -712,11 +742,12 @@ public class SFResultSet implements ResultSet {
     @Override
     public void moveToInsertRow() throws SQLException {
         afterLast();
+        updateRow.clear();
     }
 
     @Override
     public void moveToCurrentRow() throws SQLException {
-
+       updateRow.clear();
     }
 
     @Override
