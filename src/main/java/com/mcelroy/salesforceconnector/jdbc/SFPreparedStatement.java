@@ -164,12 +164,39 @@ public class SFPreparedStatement extends SFStatement implements PreparedStatemen
 
     @Override
     public void setObject(int i, Object o, int i1) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        setObject(i, o);
     }
 
     @Override
     public void setObject(int i, Object o) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        if(o == null)
+            setNull(i, 0);
+        else if(o instanceof String)
+            setString(i, (String)o);
+        else if(o instanceof BigDecimal)
+            setBigDecimal(i, (BigDecimal)o);
+        else if(o instanceof Long)
+            setLong(i, (Long)o);
+        else if(o instanceof Double)
+            setDouble(i, (Double)o);
+        else if(o instanceof Boolean)
+            setBoolean(i, (Boolean)o);
+        else if(o instanceof Timestamp)
+            setTimestamp(i, (Timestamp)o);
+        else if(o instanceof Time)
+            setTime(i, (Time)o);
+        else if(o instanceof Date)
+            setDate(i, (Date)o);
+        else if(o instanceof java.util.Date)
+            setDate(i, new Date(((java.util.Date)o).getTime()));
+        else if(o instanceof Short)
+            setShort(i, (Short)o);
+        else if(o instanceof Integer)
+            setInt(i, (Integer)o);
+        else if(o instanceof Float)
+            setFloat(i, (Float)o);
+        else
+            setString(i, o.toString());
     }
 
     @Override
