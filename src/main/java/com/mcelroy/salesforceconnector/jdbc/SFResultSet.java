@@ -3,7 +3,7 @@
 package com.mcelroy.salesforceconnector.jdbc;
 
 import com.mcelroy.salesforceconnector.parser.SQL_Column;
-import org.json.JSONException;
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.InputStream;
@@ -11,22 +11,42 @@ import java.io.Reader;
 import java.math.BigDecimal;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.sql.*;
 import java.sql.Date;
+import java.sql.*;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
 public class SFResultSet implements ResultSet {
     SFStatement statement;
+    String nextResults;
     private List<JSONObject> rows;
     private int currentRow = -1;
     private boolean wasNull = true;
     private Map<String, Object> updateRow = new HashMap<>();
 
-    public SFResultSet(SFStatement s, List<JSONObject> result) {
+    public SFResultSet(SFStatement s, JSONObject result) throws SQLException {
         this.statement = s;
-        this.rows = result;
+        updateResultSet(result);
+    }
+
+    private void updateResultSet(JSONObject r) throws SQLException {
+        nextResults = r.optString("nextRecordsUrl");
+
+        List<JSONObject> records = new ArrayList<>();
+        JSONArray a = r.optJSONArray("records");
+        if (a != null) {
+            try {
+                // for each record in the batch add the object to the results
+                for (int i = 0; i < a.length(); i++)
+                    records.add(a.getJSONObject(i));
+            } catch (Exception e) {
+                throw new SQLException("Could not get record from JSONArray", e);
+            }
+        }
+
+        this.rows = records;
+        this.currentRow = -1;
     }
 
     @Override
@@ -34,6 +54,13 @@ public class SFResultSet implements ResultSet {
         updateRow.clear();
         if (currentRow < rows.size())
             currentRow++;
+
+        // check for next fetch if we are at the end of the current list
+        if(currentRow >= rows.size() && nextResults != null && !nextResults.trim().equals("")){
+            updateResultSet(statement.apiConnection.queryNext(nextResults));
+            currentRow++; // updateResultSet sets current row to -1
+        }
+
         return currentRow >= 0 && currentRow < rows.size();
     }
 

@@ -18,7 +18,6 @@ public class SFStatement implements Statement {
     ResultSet resultSet;
     List<String> batch = new ArrayList<>();
     SQL_Statement sql_statement;
-    String nextResultSet = null;
 
     public SFStatement(SFConnection sfConnection, SFClientConnection apiConnection) {
         this.sfConnection = sfConnection;
@@ -28,25 +27,8 @@ public class SFStatement implements Statement {
     @Override
     public ResultSet executeQuery(String s) throws SQLException {
         sql_statement = SQL_Statement.parse(s);
-        updateResultSet(apiConnection.query(sql_statement.toSQL(SQL_Config.salesforceConfig)));
+        resultSet = new SFResultSet(this, apiConnection.query(sql_statement.toSQL(SQL_Config.salesforceConfig)));
         return resultSet;
-    }
-
-    private void updateResultSet(JSONObject r) throws SQLException {
-        nextResultSet = r.optString("nextRecordsUrl");
-
-        List<JSONObject> records = new ArrayList<>();
-        JSONArray a = r.optJSONArray("records");
-        if (a != null) {
-            try {
-                // for each record in the batch add the object to the results
-                for (int i = 0; i < a.length(); i++)
-                    records.add(a.getJSONObject(i));
-            } catch (Exception e) {
-                throw new SQLException("Could not get record from JSONArray", e);
-            }
-        }
-        resultSet = new SFResultSet(this, records);
     }
 
     @Override
@@ -154,11 +136,7 @@ public class SFStatement implements Statement {
 
     @Override
     public boolean getMoreResults() throws SQLException {
-        if (nextResultSet == null || nextResultSet.trim().equals(""))
-            return false;
-
-        updateResultSet(apiConnection.queryNext(nextResultSet));
-        return true;
+        return false;
     }
 
     @Override
