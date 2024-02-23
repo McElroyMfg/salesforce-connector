@@ -185,8 +185,11 @@ public class SFResultSet implements ResultSet {
         }
 
         if(object != null) {
+            if(object.isNull(getKey(object, path[path.length - 1]))){
+                wasNull = true;
+                return null;
+            }
             String v = object.optString(getKey(object, path[path.length - 1]), null);
-            wasNull = v == null || v.trim().toLowerCase().equals("null");
             return v;
         }else{
             wasNull = true;
