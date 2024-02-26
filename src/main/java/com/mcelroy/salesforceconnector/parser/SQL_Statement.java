@@ -44,10 +44,10 @@ public abstract class SQL_Statement {
             if (t.is(SELECT)) {
                 return new SQL_SelectStatement(tokenIterator);
             } else {
-                throw new RuntimeException("Statement type " + t.value + " is not supported");
+                throw new RuntimeException("Statement type " + t.getValue() + " is not supported");
             }
         } else {
-            throw new RuntimeException("Unknown token: " + t.value);
+            throw new RuntimeException("Unknown token: " + t.getValue());
         }
     }
 

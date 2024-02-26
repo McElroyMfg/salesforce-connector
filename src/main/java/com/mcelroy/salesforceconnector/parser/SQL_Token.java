@@ -116,10 +116,10 @@ public class SQL_Token {
         }
     }
 
-    public TokenType type;
-    public String value;
-    public KeywordType keyword;
-    public OperatorType operator;
+    private TokenType type;
+    private String value;
+    private KeywordType keyword;
+    private OperatorType operator;
     private final char[] sql;
     private final int offset;
 
@@ -258,6 +258,22 @@ public class SQL_Token {
         for (int i = start; i < end; i++)
             b.append(sql[i]);
         return b.toString();
+    }
+
+    public TokenType getType() {
+        return type;
+    }
+
+    public String getValue() {
+        return value;
+    }
+
+    public KeywordType getKeyword() {
+        return keyword;
+    }
+
+    public OperatorType getOperator() {
+        return operator;
     }
 
     @Override

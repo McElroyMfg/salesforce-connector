@@ -46,7 +46,7 @@ public abstract class SQL_Expression {
                 if (p.is(OPERATOR)) {
                     tokenIterator.next(); // skip peek
                     SQL_Expression rhs = parseExpression(p, s, tokenIterator);
-                    e = new SQL_OperatorExpression(e, p.operator, rhs);
+                    e = new SQL_OperatorExpression(e, p.getOperator(), rhs);
                 }
             }
 

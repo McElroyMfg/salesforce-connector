@@ -27,12 +27,12 @@ public class SQL_SelectStatement extends SQL_Statement {
 
     private void parseSelectColumn(SQL_Token.SQL_TokenIterator tokenIterator) {
         SQL_Token t = tokenIterator.get("column name");
-        SQL_Column column = new SQL_Column(t.value, SQL_Column.ColumnType.SELECT);
+        SQL_Column column = new SQL_Column(t.getValue(), SQL_Column.ColumnType.SELECT);
         columns.add(column);
         t = tokenIterator.get(AS, COMMA, FROM);
         if (t.is(AS)) {
             t = tokenIterator.get("column alias");
-            column.alias = t.value;
+            column.alias = t.getValue();
             t = tokenIterator.get(COMMA, FROM);
         }
 
@@ -44,12 +44,12 @@ public class SQL_SelectStatement extends SQL_Statement {
 
     protected void parseTable(SQL_Token.SQL_TokenIterator tokenIterator) {
         SQL_Token t = tokenIterator.get("table name");
-        tableName = t.value;
+        tableName = t.getValue();
 
         if (tokenIterator.hasNext()) {
             t = tokenIterator.next();
             if (t.is(WORD)) {
-                tableAlias = t.value;
+                tableAlias = t.getValue();
                 if (!tokenIterator.hasNext())
                     return; // had table alias but no WHERE clause
                 else
@@ -94,9 +94,9 @@ public class SQL_SelectStatement extends SQL_Statement {
         orderColumns = new ArrayList<>();
         do {
             t = tokenIterator.get("column");
-            SQL_Column c = getColumn(t.value);
+            SQL_Column c = getColumn(t.getValue());
             if (c == null) {
-                c = new SQL_Column(t.value, SQL_Column.ColumnType.ORDER);
+                c = new SQL_Column(t.getValue(), SQL_Column.ColumnType.ORDER);
                 addColumn(c);
             }
             SQL_OrderColumn oc = new SQL_OrderColumn(c);
@@ -107,7 +107,7 @@ public class SQL_SelectStatement extends SQL_Statement {
 
             t = tokenIterator.next();
             if (t.is(ASC) || t.is(DESC)) {
-                oc.setOrder(t.keyword);
+                oc.setOrder(t.getKeyword());
 
                 if (!tokenIterator.hasNext())
                     return;
@@ -126,13 +126,13 @@ public class SQL_SelectStatement extends SQL_Statement {
 
     protected void parseLimit(SQL_Token.SQL_TokenIterator tokenIterator) {
         SQL_Token t = tokenIterator.get("limit value");
-        limit = t.value;
+        limit = t.getValue();
         if (tokenIterator.hasNext()) {
             t = tokenIterator.peek();
             if (t.is(OFFSET)) {
                 tokenIterator.next(); //skip peek
                 t = tokenIterator.get("offset value");
-                offset = t.value;
+                offset = t.getValue();
             }
         }
     }

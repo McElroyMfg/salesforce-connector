@@ -26,21 +26,21 @@ public class SQL_OperatorExpression extends SQL_Expression {
     protected static SQL_Expression parseOperatorExpressionSide(SQL_Statement s, SQL_Token.SQL_TokenIterator tokenIterator) {
         SQL_Token t = tokenIterator.next();
         if (t.is(WORD)) {
-            SQL_Column col = s.getColumn(t.value);
+            SQL_Column col = s.getColumn(t.getValue());
             if (col == null) {
-                char c = t.value.charAt(0);
+                char c = t.getValue().charAt(0);
                 if (Character.isAlphabetic(c) || c == '_') {
                     // column is not in select statement but is used in where expression
-                    col = new SQL_Column(t.value, SQL_Column.ColumnType.EXPRESSION);
+                    col = new SQL_Column(t.getValue(), SQL_Column.ColumnType.EXPRESSION);
                     s.addColumn(col);
                 }
             }
             if (col != null)
                 return new SQL_ColumnExpression(col);
             else
-                return new SQL_ValueExpression(t.value); // numeric value
+                return new SQL_ValueExpression(t.getValue()); // numeric value
         } else if (t.is(QUOTE))
-            return new SQL_ValueExpression(t.value);
+            return new SQL_ValueExpression(t.getValue());
         else
             throw new ExpectedException(t, "column or value");
     }

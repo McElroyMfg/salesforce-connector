@@ -13,7 +13,7 @@ public class ExpectedException extends RuntimeException {
         StringBuilder b = new StringBuilder();
         b.append("Expected ").append(expected).append(" but got: ");
         if (t != null) {
-            b.append(t.value);
+            b.append(t.getValue());
             b.append("\n").append(t.getErrorLocation());
         }
         return b.toString();

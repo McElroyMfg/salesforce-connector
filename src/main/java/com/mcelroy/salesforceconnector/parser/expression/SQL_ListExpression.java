@@ -25,7 +25,7 @@ public class SQL_ListExpression extends SQL_Expression {
         SQL_ListExpression rhs = new SQL_ListExpression();
         do {
             SQL_Token t = tokenIterator.get("value");
-            rhs.add(t.value);
+            rhs.add(t.getValue());
             t = tokenIterator.get(COMMA, GROUP_CLOSE);
             if (t.is(GROUP_CLOSE)) {
                 return rhs;
