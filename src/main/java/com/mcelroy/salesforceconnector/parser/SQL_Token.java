@@ -13,12 +13,12 @@ public class SQL_Token {
     public interface TokenizerType {
     }
 
-    public enum TokenType implements TokenizerType {KEY_WORD, COMMA, GROUP_OPEN, GROUP_CLOSE, OPERATOR, QUOTE, WORD}
+    public enum TokenType implements TokenizerType {KEY_WORD, COMMA, GROUP_OPEN, GROUP_CLOSE, OPERATOR, QUOTE, WORD, PLACE_HOLDER}
 
-    public enum KeywordType implements TokenizerType {SELECT, INSERT, DELETE, UPDATE, FROM, WHERE, HAVING, GROUP, ORDER, BY, ASC, DESC, AS, LIMIT, OFFSET}
+    public enum KeywordType implements TokenizerType {SELECT, INSERT, DELETE, UPDATE, FROM, WHERE, HAVING, GROUP, ORDER, BY, ASC, DESC, AS, LIMIT, OFFSET, NULL}
 
     public enum OperatorType implements TokenizerType {
-        AND, OR, LIKE, IN, IS,
+        AND, OR, LIKE, IN, IS, NOT, IS_NOT("IS NOT"),
         MULTIPLY("*"), DIV("/"), SUB("-"), ADD("+"),
         EQ("="), NE("!="), NE2("<>"), LT("<"), GT(">"), LE("<="), GE(">=");
         private final String value;
@@ -150,6 +150,9 @@ public class SQL_Token {
                 case ")":
                     type = TokenType.GROUP_CLOSE;
                     break;
+                case "?":
+                    type = TokenType.PLACE_HOLDER;
+                    break;
                 default:
                     if (uv.startsWith("'"))
                         type = TokenType.QUOTE;
@@ -188,7 +191,7 @@ public class SQL_Token {
             } else if (c == '-' && tokenStart < 0 && Character.isDigit(nc)) {
                 tokenStart = i; // negative number
             } else if (c == '=' || c == '!' || c == '<' || c == '>' || c == '(' || c == ')' || c == ',' ||
-                    c == '*' || c == '/' || c == '-' || c == '+') {
+                    c == '*' || c == '/' || c == '-' || c == '+' || c == '?') {
                 if (c == '-' && tokenStart >= 0 && i - tokenStart == 4) {
                     // check if we have a date
                     StringBuilder b = new StringBuilder(27);

@@ -2,33 +2,46 @@
 // SPDX-License-Identifier: MIT
 package com.mcelroy.salesforceconnector.jdbc;
 
-import com.mcelroy.salesforceconnector.parser.SQL_Config;
-import com.mcelroy.salesforceconnector.parser.SQL_Statement;
+import com.mcelroy.salesforceconnector.parser.node.SQL_Statement;
+import com.mcelroy.salesforceconnector.parser.visitor.SOQL_Writer;
+import com.mcelroy.salesforceconnector.parser.visitor.SQL_Placeholder_Replacer;
+import com.mcelroy.salesforceconnector.parser.visitor.SQL_Visitor;
 import com.mcelroy.salesforceconnector.rest.SFClientConnection;
-import org.json.JSONArray;
-import org.json.JSONObject;
 
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class SFStatement implements Statement {
-    SFConnection sfConnection;
-    SFClientConnection apiConnection;
-    ResultSet resultSet;
-    List<String> batch = new ArrayList<>();
-    SQL_Statement sql_statement;
+    private SFConnection sfConnection;
+    private SFClientConnection apiConnection;
+    private ResultSet resultSet;
+    private List<String> batch = new ArrayList<>();
 
     public SFStatement(SFConnection sfConnection, SFClientConnection apiConnection) {
         this.sfConnection = sfConnection;
         this.apiConnection = apiConnection;
     }
 
+    public SFClientConnection getApiConnection(){
+        return apiConnection;
+    }
+
+    public ResultSet execute(SQL_Statement sql_statement, Map<Integer, String> placeholderValues) throws SQLException {
+        StringBuilder b = new StringBuilder();
+        SQL_Visitor writer = new SOQL_Writer(b);
+        if(placeholderValues != null)
+            writer = new SQL_Placeholder_Replacer(writer, placeholderValues);
+        sql_statement.accept(writer);
+        resultSet = new SFResultSet(this, sql_statement, apiConnection.query(b.toString()));
+        return resultSet;
+    }
+
     @Override
     public ResultSet executeQuery(String s) throws SQLException {
-        sql_statement = SQL_Statement.parse(s);
-        resultSet = new SFResultSet(this, apiConnection.query(sql_statement.toSQL(SQL_Config.salesforceConfig)));
-        return resultSet;
+        SQL_Statement sql_statement = SQL_Statement.parse(s);
+        return execute(sql_statement, null);
     }
 
     @Override

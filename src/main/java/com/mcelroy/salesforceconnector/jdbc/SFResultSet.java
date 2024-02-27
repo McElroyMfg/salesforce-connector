@@ -2,7 +2,11 @@
 // SPDX-License-Identifier: MIT
 package com.mcelroy.salesforceconnector.jdbc;
 
-import com.mcelroy.salesforceconnector.parser.SQL_Column;
+import com.mcelroy.salesforceconnector.parser.node.SQL_Column;
+import com.mcelroy.salesforceconnector.parser.node.SQL_Node;
+import com.mcelroy.salesforceconnector.parser.node.SQL_Statement;
+import com.mcelroy.salesforceconnector.parser.node.SQL_Table;
+import com.mcelroy.salesforceconnector.parser.visitor.SQL_Visitor;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -18,16 +22,47 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 
 public class SFResultSet implements ResultSet {
-    SFStatement statement;
-    String nextResults;
+    private SFStatement statement;
+    private List<String> selectColumnNames = new ArrayList<>();
+    private Map<String,String> selectColumnAliasMap = new HashMap<>();
+    private String tableName;
+    private String nextResults;
     private List<JSONObject> rows;
     private int currentRow = -1;
     private boolean wasNull = true;
     private Map<String, Object> updateRow = new HashMap<>();
 
-    public SFResultSet(SFStatement s, JSONObject result) throws SQLException {
+    public SFResultSet(SFStatement s, SQL_Statement sql_statement, JSONObject result) throws SQLException {
         this.statement = s;
+
+        // set initial results
         updateResultSet(result);
+
+        // Build select column info
+        sql_statement.accept(new SQL_Visitor() {
+            @Override
+            public void visit(SQL_Node node) {
+                if(node instanceof SQL_Column){
+                    SQL_Column c = (SQL_Column)node;
+                    if(c.getColumnType() == SQL_Column.ColumnType.SELECT){
+                        selectColumnNames.add(c.getName());
+                        if(c.getAlias() != null)
+                            selectColumnAliasMap.put(c.getAlias(), c.getName());
+                    }
+                }
+                if(node instanceof SQL_Table)
+                    tableName = ((SQL_Table)node).getName();
+            }
+
+            @Override
+            public void leave(SQL_Node node) {
+
+            }
+        });
+    }
+
+    public int columnCount(){
+        return selectColumnNames.size();
     }
 
     private void updateResultSet(JSONObject r) throws SQLException {
@@ -57,7 +92,7 @@ public class SFResultSet implements ResultSet {
 
         // check for next fetch if we are at the end of the current list
         if(currentRow >= rows.size() && nextResults != null && !nextResults.trim().equals("")){
-            updateResultSet(statement.apiConnection.queryNext(nextResults));
+            updateResultSet(statement.getApiConnection().queryNext(nextResults));
             currentRow++; // updateResultSet sets current row to -1
         }
 
@@ -74,16 +109,11 @@ public class SFResultSet implements ResultSet {
         return wasNull;
     }
 
-    private String getColumnName(int i) throws SQLException{
-        if (statement.sql_statement != null) {
-            String name = statement.sql_statement.getSelectColumnName(i);
-            if (name != null)
-                return name;
-            else
-                throw new SQLException("Invalid column index: " + i);
-        }
-
-        throw new SQLException("No active SQL statement");
+    public String getColumnName(int i) throws SQLException{
+        if(i > selectColumnNames.size())
+            throw new SQLException("Invalid column index: " + i);
+        else
+            return selectColumnNames.get(i - 1);
     }
 
     @Override
@@ -169,11 +199,9 @@ public class SFResultSet implements ResultSet {
     @Override
     public String getString(String s) throws SQLException {
         // check if this is an alias for a column
-        if (statement.sql_statement != null) {
-            SQL_Column c = statement.sql_statement.getColumn(s);
-            if (c != null)
-                s = c.name;
-        }
+        String c = selectColumnAliasMap.get(s);
+        if(c != null)
+            s = c;
 
         return getDottedString(rows.get(currentRow), s.split("\\."));
     }
@@ -345,7 +373,7 @@ public class SFResultSet implements ResultSet {
 
     @Override
     public ResultSetMetaData getMetaData() throws SQLException {
-        return new SFResultSetMetaData(statement);
+        return new SFResultSetMetaData(this);
     }
 
     @Override
@@ -737,9 +765,8 @@ public class SFResultSet implements ResultSet {
 
     @Override
     public void insertRow() throws SQLException {
-        String table = statement.sql_statement.tableName;
         JSONObject jo = new JSONObject(updateRow);
-        statement.apiConnection.insert(table, jo.toString());
+        statement.getApiConnection().insert(tableName, jo.toString());
         updateRow.clear();
     }
 
@@ -748,9 +775,8 @@ public class SFResultSet implements ResultSet {
         String id = getString("id");
         if(id == null)
             throw new SQLException("Can not update record. Selected columns do not include id field.");
-        String table = statement.sql_statement.tableName;
         JSONObject jo = new JSONObject(updateRow);
-        statement.apiConnection.update(table + "/"  + id, jo.toString());
+        statement.getApiConnection().update(tableName + "/"  + id, jo.toString());
         updateRow.clear();
     }
 

@@ -65,7 +65,7 @@ public class SFCallableStatement extends SFPreparedStatement implements Callable
             inputs.put(values);
             for (int i = 0; i < inputNames.size(); i++) {
                 String key = inputNames.get(i);
-                String value = params.get(i);
+                String value = params.get(i + 1);
                 if (value != null) {
                     JSONString js = new JSONString() {
                         @Override
@@ -85,10 +85,9 @@ public class SFCallableStatement extends SFPreparedStatement implements Callable
 
     @Override
     public boolean execute() throws SQLException {
-        resultSet = null;
         String body = parseBody();
 
-        JSONObject response = apiConnection.launchFlow(flowName, body);
+        JSONObject response = getApiConnection().launchFlow(flowName, body);
         if (!response.optBoolean("isSuccess", true)) {
             String err = response.optString("errors", "Error calling procedure");
             throw new SQLException(err);
@@ -100,7 +99,7 @@ public class SFCallableStatement extends SFPreparedStatement implements Callable
 
     @Override
     public void setString(int i, String s) throws SQLException {
-        params.put(i - 1, JSONObject.quote(s));
+        params.put(i, JSONObject.quote(s));
     }
 
     @Override
@@ -111,13 +110,13 @@ public class SFCallableStatement extends SFPreparedStatement implements Callable
             for (Object x : c) {
                 a.put(x);
             }
-            params.put(i - 1, a.toString());
+            params.put(i, a.toString());
         } else if (o instanceof Map) {
             JSONObject obj = new JSONObject((Map) o);
-            params.put(i - 1, obj.toString());
+            params.put(i, obj.toString());
         } else {
             JSONObject obj = new JSONObject(o);
-            params.put(i - 1, obj.toString());
+            params.put(i, obj.toString());
         }
     }
 

@@ -4,15 +4,15 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 
 public class SFResultSetMetaData implements ResultSetMetaData {
-    private SFStatement statement;
+    private SFResultSet rs;
 
-    protected SFResultSetMetaData(SFStatement statement){
-        this.statement = statement;
+    protected SFResultSetMetaData(SFResultSet rs){
+        this.rs = rs;
     }
 
     @Override
     public int getColumnCount() throws SQLException {
-        return statement.sql_statement.getSelectColumnCount();
+        return rs.columnCount();
     }
 
     @Override
@@ -57,7 +57,7 @@ public class SFResultSetMetaData implements ResultSetMetaData {
 
     @Override
     public String getColumnName(int i) throws SQLException {
-        return statement.sql_statement.getSelectColumnName(i);
+        return rs.getColumnName(i);
     }
 
     @Override

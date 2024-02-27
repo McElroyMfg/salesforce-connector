@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 package com.mcelroy.salesforceconnector.jdbc;
 
+import com.mcelroy.salesforceconnector.parser.node.SQL_Statement;
 import com.mcelroy.salesforceconnector.rest.SFClientConnection;
 
 import java.io.InputStream;
@@ -15,32 +16,12 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class SFPreparedStatement extends SFStatement implements PreparedStatement {
-    String sql;
-    Map<Integer, String> params = new HashMap<>();
+    private SQL_Statement sql_statement;
+    protected Map<Integer, String> params = new HashMap<>();
 
     public SFPreparedStatement(SFConnection sfConnection, SFClientConnection apiConnection, String sql) {
         super(sfConnection, apiConnection);
-        this.sql = sql;
-    }
-
-    private String buildSQL() throws SQLException {
-        StringBuilder b = new StringBuilder(sql.length() * 2);
-        String[] parts = sql.split("\\?");
-        for (int i = 0; i < parts.length - 1; i++) {
-            b.append(parts[i]);
-            String p = params.get(i);
-            if (p == null)
-                throw new SQLException("Missing parameter: " + i + 1);
-            b.append(p);
-        }
-        b.append(parts[parts.length - 1]);
-        if (sql.charAt(sql.length() - 1) == '?') {
-            String p = params.get(parts.length - 1);
-            if (p == null)
-                throw new SQLException("Missing parameter: " + parts.length);
-            b.append(p);
-        }
-        return b.toString();
+        this.sql_statement = SQL_Statement.parse(sql);
     }
 
     @Override
@@ -57,12 +38,12 @@ public class SFPreparedStatement extends SFStatement implements PreparedStatemen
 
     @Override
     public void setNull(int i, int i1) throws SQLException {
-        params.put(i - 1, "null");
+        params.put(i, "null");
     }
 
     @Override
     public void setBoolean(int i, boolean b) throws SQLException {
-        params.put(i - 1, b ? "true" : "false");
+        params.put(i, b ? "true" : "false");
     }
 
     @Override
@@ -82,7 +63,7 @@ public class SFPreparedStatement extends SFStatement implements PreparedStatemen
 
     @Override
     public void setLong(int i, long l) throws SQLException {
-        params.put(i - 1, ((Long) l).toString());
+        params.put(i, ((Long) l).toString());
     }
 
     @Override
@@ -92,20 +73,20 @@ public class SFPreparedStatement extends SFStatement implements PreparedStatemen
 
     @Override
     public void setDouble(int i, double v) throws SQLException {
-        params.put(i - 1, ((Double) v).toString());
+        params.put(i, ((Double) v).toString());
     }
 
     @Override
     public void setBigDecimal(int i, BigDecimal bigDecimal) throws SQLException {
         if (bigDecimal == null)
             setNull(i, 0);
-        params.put(i - 1, bigDecimal.toString());
+        params.put(i, bigDecimal.toString());
     }
 
     @Override
     public void setString(int i, String s) throws SQLException {
         s = s.replace("\\", "\\\\").replace("'", "\\'");
-        params.put(i - 1, "'" + s + "'");
+        params.put(i, "'" + s + "'");
     }
 
     @Override
@@ -123,7 +104,7 @@ public class SFPreparedStatement extends SFStatement implements PreparedStatemen
         if (date == null)
             setNull(i, 0);
         else
-            params.put(i - 1, formatDate(date, "yyyy-MM-dd"));
+            params.put(i, formatDate(date, "yyyy-MM-dd"));
     }
 
     @Override
@@ -131,7 +112,7 @@ public class SFPreparedStatement extends SFStatement implements PreparedStatemen
         if (time == null)
             setNull(i, 0);
         else
-            params.put(i - 1, formatDate(time, "yyyy-MM-dd'T'HH:mm:ss.SSSZ"));
+            params.put(i, formatDate(time, "yyyy-MM-dd'T'HH:mm:ss.SSSZ"));
     }
 
     @Override
@@ -139,7 +120,7 @@ public class SFPreparedStatement extends SFStatement implements PreparedStatemen
         if (timestamp == null)
             setNull(i, 0);
         else
-            params.put(i - 1, formatDate(timestamp, "yyyy-MM-dd'T'HH:mm:ss.SSSZ"));
+            params.put(i, formatDate(timestamp, "yyyy-MM-dd'T'HH:mm:ss.SSSZ"));
     }
 
     @Override
@@ -169,39 +150,40 @@ public class SFPreparedStatement extends SFStatement implements PreparedStatemen
 
     @Override
     public void setObject(int i, Object o) throws SQLException {
-        if(o == null)
+        if (o == null)
             setNull(i, 0);
-        else if(o instanceof String)
-            setString(i, (String)o);
-        else if(o instanceof BigDecimal)
-            setBigDecimal(i, (BigDecimal)o);
-        else if(o instanceof Long)
-            setLong(i, (Long)o);
-        else if(o instanceof Double)
-            setDouble(i, (Double)o);
-        else if(o instanceof Boolean)
-            setBoolean(i, (Boolean)o);
-        else if(o instanceof Timestamp)
-            setTimestamp(i, (Timestamp)o);
-        else if(o instanceof Time)
-            setTime(i, (Time)o);
-        else if(o instanceof Date)
-            setDate(i, (Date)o);
-        else if(o instanceof java.util.Date)
-            setDate(i, new Date(((java.util.Date)o).getTime()));
-        else if(o instanceof Short)
-            setShort(i, (Short)o);
-        else if(o instanceof Integer)
-            setInt(i, (Integer)o);
-        else if(o instanceof Float)
-            setFloat(i, (Float)o);
+        else if (o instanceof String)
+            setString(i, (String) o);
+        else if (o instanceof BigDecimal)
+            setBigDecimal(i, (BigDecimal) o);
+        else if (o instanceof Long)
+            setLong(i, (Long) o);
+        else if (o instanceof Double)
+            setDouble(i, (Double) o);
+        else if (o instanceof Boolean)
+            setBoolean(i, (Boolean) o);
+        else if (o instanceof Timestamp)
+            setTimestamp(i, (Timestamp) o);
+        else if (o instanceof Time)
+            setTime(i, (Time) o);
+        else if (o instanceof Date)
+            setDate(i, (Date) o);
+        else if (o instanceof java.util.Date)
+            setDate(i, new Date(((java.util.Date) o).getTime()));
+        else if (o instanceof Short)
+            setShort(i, (Short) o);
+        else if (o instanceof Integer)
+            setInt(i, (Integer) o);
+        else if (o instanceof Float)
+            setFloat(i, (Float) o);
         else
             setString(i, o.toString());
     }
 
     @Override
     public boolean execute() throws SQLException {
-        return execute(buildSQL());
+        execute(sql_statement, params);
+        return true;
     }
 
     @Override
