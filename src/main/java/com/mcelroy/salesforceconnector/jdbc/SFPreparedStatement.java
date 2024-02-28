@@ -21,7 +21,8 @@ public class SFPreparedStatement extends SFStatement implements PreparedStatemen
 
     public SFPreparedStatement(SFConnection sfConnection, SFClientConnection apiConnection, String sql) {
         super(sfConnection, apiConnection);
-        this.sql_statement = SQL_Statement.parse(sql);
+        if(!sql.startsWith("call"))
+            this.sql_statement = SQL_Statement.parse(sql);
     }
 
     @Override

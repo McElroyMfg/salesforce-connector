@@ -6,13 +6,11 @@ import com.mcelroy.salesforceconnector.parser.visitor.SOQL_Writer;
 import com.mcelroy.salesforceconnector.parser.visitor.SQL_Placeholder_Replacer;
 import com.mcelroy.salesforceconnector.parser.visitor.SQL_Visitor;
 import com.mcelroy.salesforceconnector.rest.SFClientConnection;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.junit.Test;
 
-import java.sql.Date;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.Statement;
+import java.sql.*;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.HashMap;
@@ -103,5 +101,34 @@ public class JdbcTest {
         assertEquals(4, rs.getInt(3));
         assertEquals("Acme", rs.getString(2));
         assertEquals(getDate("2024-01-30"), rs.getDate(4));
+    }
+
+    @Test
+    public void CallableStatementTest() throws Exception{
+
+        SFClientConnection clientConnection = mock(SFClientConnection.class);
+        SFConnection connection = spy(new SFConnection(null));
+        doReturn(clientConnection).when(connection).getClientConnection();
+
+        Map<String,Object> accountVariable = new HashMap<>();
+        accountVariable.put("name", "Acme");
+        accountVariable.put( "repId", 5 );
+
+        JSONObject body = new JSONObject();
+        JSONArray inputs = new JSONArray();
+        body.put("inputs", inputs);
+        JSONObject values = new JSONObject();
+        inputs.put(values);
+        values.put("accountInput", accountVariable);
+
+        JSONObject response = new JSONObject("{isSuccess: true}");
+
+        when(clientConnection.launchFlow("My_SF_Flow", body.toString())).thenReturn(response);
+
+        CallableStatement statement = connection.prepareCall("call My_SF_Flow");
+        statement.setObject("accountInput", accountVariable);
+        boolean error = statement.execute();
+
+        assertEquals(false, error);
     }
 }
