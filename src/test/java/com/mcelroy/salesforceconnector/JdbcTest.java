@@ -17,6 +17,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.mockito.Mockito.*;
 
 public class JdbcTest {
@@ -49,7 +50,7 @@ public class JdbcTest {
         SFConnection connection = spy(new SFConnection(null));
         doReturn(clientConnection).when(connection).getClientConnection();
 
-        JSONObject response = new JSONObject("{records: [{id: \"ID123\", name: \"Acme\", repId: 4, since: \"2024-01-30\"}, {id: \"ID456\", name: \"Stuff Inc.\", repId: 5, since: \"2023-08-04\"}]}");
+        JSONObject response = new JSONObject("{records: [{id: \"ID123\", name: \"Acme\", repId: 4, since: \"2024-01-30\", level: \"gold\"}, {id: \"ID456\", name: \"Stuff Inc.\", repId: 5, since: \"2023-08-04\", level: null}]}");
         String sql = "select id, name, repId, since from Account";
 
         when(clientConnection.query(getQuery(sql))).thenReturn(response);
@@ -68,6 +69,12 @@ public class JdbcTest {
         assertEquals(4, rs.getInt(3));
         assertEquals("Acme", rs.getString(2));
         assertEquals(getDate("2024-01-30"), rs.getDate(4));
+
+        assertEquals("gold", rs.getString("level"));
+        assertEquals(false, rs.wasNull());
+        rs.next();
+        assertNull(rs.getString("level"));
+        assertEquals(true, rs.wasNull());
     }
 
     @Test
