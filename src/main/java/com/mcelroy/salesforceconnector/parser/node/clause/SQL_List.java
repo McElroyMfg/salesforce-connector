@@ -17,7 +17,7 @@ public class SQL_List extends SQL_Node {
         tokenIterator.get(GROUP_OPEN);
         add(tokenIterator);
         SQL_Token p = tokenIterator.peek();
-        while(p != null && p.is(COMMA)){
+        while (p != null && p.is(COMMA)) {
             tokenIterator.next(); // consume peek
             add(tokenIterator);
             p = tokenIterator.peek();
@@ -25,9 +25,9 @@ public class SQL_List extends SQL_Node {
         tokenIterator.get(GROUP_CLOSE);
     }
 
-    private void add(SQL_Token.SQL_TokenIterator tokenIterator){
+    private void add(SQL_Token.SQL_TokenIterator tokenIterator) {
         SQL_Token t = tokenIterator.get(WORD, QUOTE, PLACE_HOLDER);
-        if(t.is(PLACE_HOLDER))
+        if (t.is(PLACE_HOLDER))
             list.add(new SQL_Placeholder());
         else
             list.add(new SQL_Value(t.getValue()));
@@ -36,7 +36,7 @@ public class SQL_List extends SQL_Node {
     @Override
     public void accept(SQL_Visitor visitor) {
         super.accept(visitor);
-        for(SQL_Node n : list)
+        for (SQL_Node n : list)
             n.accept(visitor);
         super.leave(visitor);
     }

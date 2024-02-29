@@ -21,7 +21,7 @@ import static org.mockito.Mockito.*;
 
 public class JdbcTest {
 
-    private String getQuery(String s){
+    private String getQuery(String s) {
         SQL_Statement sql_statement = SQL_Statement.parse(s);
         StringBuilder b = new StringBuilder();
         SQL_Visitor writer = new SOQL_Writer(b);
@@ -29,7 +29,7 @@ public class JdbcTest {
         return b.toString();
     }
 
-    private String getQuery(String s, Map<Integer, String> values){
+    private String getQuery(String s, Map<Integer, String> values) {
         SQL_Statement sql_statement = SQL_Statement.parse(s);
         StringBuilder b = new StringBuilder();
         SQL_Visitor writer = new SQL_Placeholder_Replacer(new SOQL_Writer(b), values);
@@ -43,7 +43,7 @@ public class JdbcTest {
     }
 
     @Test
-    public void StatementQueryTest() throws Exception{
+    public void StatementQueryTest() throws Exception {
 
         SFClientConnection clientConnection = mock(SFClientConnection.class);
         SFConnection connection = spy(new SFConnection(null));
@@ -71,7 +71,7 @@ public class JdbcTest {
     }
 
     @Test
-    public void PreparedStatementQueryTest() throws Exception{
+    public void PreparedStatementQueryTest() throws Exception {
 
         SFClientConnection clientConnection = mock(SFClientConnection.class);
         SFConnection connection = spy(new SFConnection(null));
@@ -104,15 +104,15 @@ public class JdbcTest {
     }
 
     @Test
-    public void CallableStatementTest() throws Exception{
+    public void CallableStatementTest() throws Exception {
 
         SFClientConnection clientConnection = mock(SFClientConnection.class);
         SFConnection connection = spy(new SFConnection(null));
         doReturn(clientConnection).when(connection).getClientConnection();
 
-        Map<String,Object> accountVariable = new HashMap<>();
+        Map<String, Object> accountVariable = new HashMap<>();
         accountVariable.put("name", "Acme");
-        accountVariable.put( "repId", 5 );
+        accountVariable.put("repId", 5);
 
         JSONObject body = new JSONObject();
         JSONArray inputs = new JSONArray();

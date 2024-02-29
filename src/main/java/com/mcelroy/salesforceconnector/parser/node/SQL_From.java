@@ -5,13 +5,11 @@ package com.mcelroy.salesforceconnector.parser.node;
 import com.mcelroy.salesforceconnector.parser.SQL_Token;
 import com.mcelroy.salesforceconnector.parser.visitor.SQL_Visitor;
 
-import static com.mcelroy.salesforceconnector.parser.SQL_Token.TokenType.WORD;
-
 public class SQL_From extends SQL_Node {
 
     private SQL_Table table;
 
-    public SQL_From(SQL_Token.SQL_TokenIterator tokenIterator){
+    public SQL_From(SQL_Token.SQL_TokenIterator tokenIterator) {
         table = new SQL_Table(tokenIterator);
     }
 

@@ -14,19 +14,19 @@ public class SQL_Placeholder_Replacer implements SQL_Visitor {
     private Map<Integer, String> values;
     private int index = 0;
 
-    public SQL_Placeholder_Replacer(SQL_Visitor writer, Map<Integer, String> values){
+    public SQL_Placeholder_Replacer(SQL_Visitor writer, Map<Integer, String> values) {
         this.writer = writer;
         this.values = values;
     }
 
     @Override
     public void visit(SQL_Node node) {
-        if(node instanceof SQL_Placeholder){
+        if (node instanceof SQL_Placeholder) {
             String v = values.get(++index);
-            if(v == null)
+            if (v == null)
                 throw new PlaceholderException();
             writer.visit(new SQL_Value(v));
-        }else
+        } else
             writer.visit(node);
     }
 

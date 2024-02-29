@@ -9,9 +9,10 @@ import static com.mcelroy.salesforceconnector.parser.SQL_Token.TokenType.KEY_WOR
 
 public class SQL_Statement extends SQL_Node {
 
-    protected SQL_Statement(){}
+    protected SQL_Statement() {
+    }
 
-    public static SQL_Statement parse(String sql){
+    public static SQL_Statement parse(String sql) {
         SQL_Token.SQL_TokenIterator tokenIterator = SQL_Token.tokenize(sql);
         if (!tokenIterator.hasNext())
             throw new RuntimeException("Empty SQL statement");

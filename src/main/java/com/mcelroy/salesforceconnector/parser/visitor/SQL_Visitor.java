@@ -6,5 +6,6 @@ import com.mcelroy.salesforceconnector.parser.node.SQL_Node;
 
 public interface SQL_Visitor {
     public void visit(SQL_Node node);
+
     public void leave(SQL_Node node);
 }

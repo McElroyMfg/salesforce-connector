@@ -24,14 +24,14 @@ public class SFStatement implements Statement {
         this.apiConnection = apiConnection;
     }
 
-    public SFClientConnection getApiConnection(){
+    public SFClientConnection getApiConnection() {
         return apiConnection;
     }
 
     public ResultSet execute(SQL_Statement sql_statement, Map<Integer, String> placeholderValues) throws SQLException {
         StringBuilder b = new StringBuilder();
         SQL_Visitor writer = new SOQL_Writer(b);
-        if(placeholderValues != null)
+        if (placeholderValues != null)
             writer = new SQL_Placeholder_Replacer(writer, placeholderValues);
         sql_statement.accept(writer);
         resultSet = new SFResultSet(this, sql_statement, apiConnection.query(b.toString()));

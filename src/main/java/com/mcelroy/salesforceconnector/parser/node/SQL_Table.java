@@ -11,7 +11,7 @@ public class SQL_Table extends SQL_Node {
     private String name;
     private String alias;
 
-    public SQL_Table(SQL_Token.SQL_TokenIterator tokenIterator){
+    public SQL_Table(SQL_Token.SQL_TokenIterator tokenIterator) {
         SQL_Token t = tokenIterator.get("table name");
         this.name = t.getValue();
         SQL_Token p = tokenIterator.peek();
@@ -33,7 +33,7 @@ public class SQL_Table extends SQL_Node {
 
     @Override
     public String toString() {
-        if(alias != null)
+        if (alias != null)
             return name + " " + alias;
         else
             return name;

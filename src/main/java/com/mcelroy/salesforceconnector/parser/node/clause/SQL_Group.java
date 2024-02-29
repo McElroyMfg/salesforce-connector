@@ -7,7 +7,7 @@ public class SQL_Group extends SQL_Node {
 
     private SQL_Node node;
 
-    public SQL_Group(SQL_Node node){
+    public SQL_Group(SQL_Node node) {
         this.node = node;
     }
 

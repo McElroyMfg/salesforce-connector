@@ -14,10 +14,10 @@ public class SQL_Column_List extends SQL_Node {
 
     private List<SQL_Column> columns = new ArrayList<>();
 
-    public SQL_Column_List(SQL_Token.SQL_TokenIterator tokenIterator, SQL_Column.ColumnType columnType){
+    public SQL_Column_List(SQL_Token.SQL_TokenIterator tokenIterator, SQL_Column.ColumnType columnType) {
         columns.add(new SQL_Column(tokenIterator, columnType));
         SQL_Token p = tokenIterator.peek();
-        while(p != null && p.is(COMMA)) {
+        while (p != null && p.is(COMMA)) {
             tokenIterator.next(); // consume peek
             columns.add(new SQL_Column(tokenIterator, columnType));
             p = tokenIterator.peek();
@@ -31,7 +31,7 @@ public class SQL_Column_List extends SQL_Node {
     @Override
     public void accept(SQL_Visitor visitor) {
         super.accept(visitor);
-        for(SQL_Column c : columns)
+        for (SQL_Column c : columns)
             c.accept(visitor);
         super.leave(visitor);
     }

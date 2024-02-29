@@ -24,7 +24,7 @@ import java.util.*;
 public class SFResultSet implements ResultSet {
     private SFStatement statement;
     private List<String> selectColumnNames = new ArrayList<>();
-    private Map<String,String> selectColumnAliasMap = new HashMap<>();
+    private Map<String, String> selectColumnAliasMap = new HashMap<>();
     private String tableName;
     private String nextResults;
     private List<JSONObject> rows;
@@ -42,16 +42,16 @@ public class SFResultSet implements ResultSet {
         sql_statement.accept(new SQL_Visitor() {
             @Override
             public void visit(SQL_Node node) {
-                if(node instanceof SQL_Column){
-                    SQL_Column c = (SQL_Column)node;
-                    if(c.getColumnType() == SQL_Column.ColumnType.SELECT){
+                if (node instanceof SQL_Column) {
+                    SQL_Column c = (SQL_Column) node;
+                    if (c.getColumnType() == SQL_Column.ColumnType.SELECT) {
                         selectColumnNames.add(c.getName());
-                        if(c.getAlias() != null)
+                        if (c.getAlias() != null)
                             selectColumnAliasMap.put(c.getAlias(), c.getName());
                     }
                 }
-                if(node instanceof SQL_Table)
-                    tableName = ((SQL_Table)node).getName();
+                if (node instanceof SQL_Table)
+                    tableName = ((SQL_Table) node).getName();
             }
 
             @Override
@@ -61,7 +61,7 @@ public class SFResultSet implements ResultSet {
         });
     }
 
-    public int columnCount(){
+    public int columnCount() {
         return selectColumnNames.size();
     }
 
@@ -91,7 +91,7 @@ public class SFResultSet implements ResultSet {
             currentRow++;
 
         // check for next fetch if we are at the end of the current list
-        if(currentRow >= rows.size() && nextResults != null && !nextResults.trim().equals("")){
+        if (currentRow >= rows.size() && nextResults != null && !nextResults.trim().equals("")) {
             updateResultSet(statement.getApiConnection().queryNext(nextResults));
             currentRow++; // updateResultSet sets current row to -1
         }
@@ -109,8 +109,8 @@ public class SFResultSet implements ResultSet {
         return wasNull;
     }
 
-    public String getColumnName(int i) throws SQLException{
-        if(i > selectColumnNames.size())
+    public String getColumnName(int i) throws SQLException {
+        if (i > selectColumnNames.size())
             throw new SQLException("Invalid column index: " + i);
         else
             return selectColumnNames.get(i - 1);
@@ -200,7 +200,7 @@ public class SFResultSet implements ResultSet {
     public String getString(String s) throws SQLException {
         // check if this is an alias for a column
         String c = selectColumnAliasMap.get(s);
-        if(c != null)
+        if (c != null)
             s = c;
 
         return getDottedString(rows.get(currentRow), s.split("\\."));
@@ -208,18 +208,18 @@ public class SFResultSet implements ResultSet {
 
     private String getDottedString(JSONObject object, String[] path) throws SQLException {
         for (int i = 0; i < path.length - 1; i++) {
-            if(object != null)
+            if (object != null)
                 object = object.optJSONObject(getKey(object, path[i]));
         }
 
-        if(object != null) {
-            if(object.isNull(getKey(object, path[path.length - 1]))){
+        if (object != null) {
+            if (object.isNull(getKey(object, path[path.length - 1]))) {
                 wasNull = true;
                 return null;
             }
             String v = object.optString(getKey(object, path[path.length - 1]), null);
             return v;
-        }else{
+        } else {
             wasNull = true;
             return null;
         }
@@ -592,7 +592,7 @@ public class SFResultSet implements ResultSet {
 
     @Override
     public void updateDate(int i, Date date) throws SQLException {
-       updateDate(getColumnName(i), date);
+        updateDate(getColumnName(i), date);
     }
 
     @Override
@@ -733,32 +733,32 @@ public class SFResultSet implements ResultSet {
 
     @Override
     public void updateObject(String s, Object o) throws SQLException {
-        if(o == null)
+        if (o == null)
             updateNull(s);
-        else if(o instanceof String)
-            updateString(s, (String)o);
-        else if(o instanceof BigDecimal)
-            updateBigDecimal(s, (BigDecimal)o);
-        else if(o instanceof Long)
-            updateLong(s, (Long)o);
-        else if(o instanceof Double)
-            updateDouble(s, (Double)o);
-        else if(o instanceof Boolean)
-            updateBoolean(s, (Boolean)o);
-        else if(o instanceof Timestamp)
-            updateTimestamp(s, (Timestamp)o);
-        else if(o instanceof Time)
-            updateTime(s, (Time)o);
-        else if(o instanceof Date)
-            updateDate(s, (Date)o);
-        else if(o instanceof java.util.Date)
-            updateDate(s, new Date(((java.util.Date)o).getTime()));
-        else if(o instanceof Short)
-            updateShort(s, (Short)o);
-        else if(o instanceof Integer)
-            updateInt(s, (Integer)o);
-        else if(o instanceof Float)
-            updateFloat(s, (Float)o);
+        else if (o instanceof String)
+            updateString(s, (String) o);
+        else if (o instanceof BigDecimal)
+            updateBigDecimal(s, (BigDecimal) o);
+        else if (o instanceof Long)
+            updateLong(s, (Long) o);
+        else if (o instanceof Double)
+            updateDouble(s, (Double) o);
+        else if (o instanceof Boolean)
+            updateBoolean(s, (Boolean) o);
+        else if (o instanceof Timestamp)
+            updateTimestamp(s, (Timestamp) o);
+        else if (o instanceof Time)
+            updateTime(s, (Time) o);
+        else if (o instanceof Date)
+            updateDate(s, (Date) o);
+        else if (o instanceof java.util.Date)
+            updateDate(s, new Date(((java.util.Date) o).getTime()));
+        else if (o instanceof Short)
+            updateShort(s, (Short) o);
+        else if (o instanceof Integer)
+            updateInt(s, (Integer) o);
+        else if (o instanceof Float)
+            updateFloat(s, (Float) o);
         else
             updateString(s, o.toString());
     }
@@ -773,10 +773,10 @@ public class SFResultSet implements ResultSet {
     @Override
     public void updateRow() throws SQLException {
         String id = getString("id");
-        if(id == null)
+        if (id == null)
             throw new SQLException("Can not update record. Selected columns do not include id field.");
         JSONObject jo = new JSONObject(updateRow);
-        statement.getApiConnection().update(tableName + "/"  + id, jo.toString());
+        statement.getApiConnection().update(tableName + "/" + id, jo.toString());
         updateRow.clear();
     }
 
@@ -803,7 +803,7 @@ public class SFResultSet implements ResultSet {
 
     @Override
     public void moveToCurrentRow() throws SQLException {
-       updateRow.clear();
+        updateRow.clear();
     }
 
     @Override

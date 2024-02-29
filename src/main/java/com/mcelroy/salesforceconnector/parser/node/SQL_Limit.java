@@ -12,7 +12,7 @@ public class SQL_Limit extends SQL_Node {
     private String limit;
     private String offset;
 
-    public SQL_Limit(SQL_Token.SQL_TokenIterator tokenIterator){
+    public SQL_Limit(SQL_Token.SQL_TokenIterator tokenIterator) {
         SQL_Token t = tokenIterator.get("limit value");
         limit = t.getValue();
         if (tokenIterator.hasNext()) {
@@ -40,7 +40,7 @@ public class SQL_Limit extends SQL_Node {
 
     @Override
     public String toString() {
-        if(offset != null)
+        if (offset != null)
             return "LIMIT " + limit + " OFFSET " + offset;
         else
             return "LIMIT " + limit;

@@ -21,27 +21,27 @@ public class SQL_Select_Statement extends SQL_Statement {
         tokenIterator.get(FROM);
         from = new SQL_From(tokenIterator);
 
-        if(tokenIterator.hasNext()) {
+        if (tokenIterator.hasNext()) {
             SQL_Token t = tokenIterator.get(WHERE, ORDER, LIMIT);
 
             if (t.is(WHERE)) {
                 where = new SQL_Where(tokenIterator);
-                if(tokenIterator.hasNext())
+                if (tokenIterator.hasNext())
                     t = tokenIterator.get(HAVING, ORDER, LIMIT);
             }
 
-            if(t.is(HAVING)){
+            if (t.is(HAVING)) {
                 having = new SQL_Having(tokenIterator);
-                if(tokenIterator.hasNext())
+                if (tokenIterator.hasNext())
                     t = tokenIterator.get(ORDER, LIMIT);
             }
 
-            if (t.is(ORDER)){
+            if (t.is(ORDER)) {
                 tokenIterator.get(BY);
                 order_by = new SQL_Order_By(tokenIterator);
             }
 
-            if(t.is(LIMIT)){
+            if (t.is(LIMIT)) {
                 limit = new SQL_Limit(tokenIterator);
             }
 
@@ -51,8 +51,8 @@ public class SQL_Select_Statement extends SQL_Statement {
         this.accept(new SQL_Visitor() {
             @Override
             public void visit(SQL_Node node) {
-                if(node instanceof SQL_Column){
-                    ((SQL_Column)node).updateTableAlias(from.getTable());
+                if (node instanceof SQL_Column) {
+                    ((SQL_Column) node).updateTableAlias(from.getTable());
                 }
             }
 
@@ -66,9 +66,9 @@ public class SQL_Select_Statement extends SQL_Statement {
         this.accept(new SQL_Visitor() {
             @Override
             public void visit(SQL_Node node) {
-                if(node instanceof SQL_Column){
-                    SQL_Column c = (SQL_Column)node;
-                    if(!(c.getColumnType() == SQL_Column.ColumnType.SELECT))
+                if (node instanceof SQL_Column) {
+                    SQL_Column c = (SQL_Column) node;
+                    if (!(c.getColumnType() == SQL_Column.ColumnType.SELECT))
                         c.updateAliasName(selectColumns.getColumns());
                 }
             }
@@ -88,16 +88,16 @@ public class SQL_Select_Statement extends SQL_Statement {
 
         from.accept(visitor);
 
-        if(where != null)
+        if (where != null)
             where.accept(visitor);
 
-        if(having != null)
+        if (having != null)
             having.accept(visitor);
 
-        if(order_by != null)
+        if (order_by != null)
             order_by.accept(visitor);
 
-        if(limit != null)
+        if (limit != null)
             limit.accept(visitor);
     }
 

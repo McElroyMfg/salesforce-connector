@@ -12,7 +12,7 @@ public class MissingException extends RuntimeException {
     private static String getMessage(SQL_Token t, String expected) {
         StringBuilder b = new StringBuilder();
         b.append("Missing ").append(expected);
-        if(t != null)
+        if (t != null)
             b.append("\n").append(t.getErrorLocation());
         return b.toString();
     }

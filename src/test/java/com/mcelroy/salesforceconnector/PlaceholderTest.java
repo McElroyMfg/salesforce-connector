@@ -13,14 +13,14 @@ import static org.junit.Assert.assertEquals;
 
 public class PlaceholderTest {
 
-    private String sql(SQL_Statement s, Map<Integer, String> values){
+    private String sql(SQL_Statement s, Map<Integer, String> values) {
         StringBuilder b = new StringBuilder();
         SQL_Placeholder_Replacer w = new SQL_Placeholder_Replacer(new SQL_Writer(b), values);
         s.accept(w);
         return b.toString();
     }
 
-    private String soql(SQL_Statement s, Map<Integer, String> values){
+    private String soql(SQL_Statement s, Map<Integer, String> values) {
         StringBuilder b = new StringBuilder();
         SQL_Placeholder_Replacer w = new SQL_Placeholder_Replacer(new SOQL_Writer(b), values);
         s.accept(w);
@@ -28,7 +28,7 @@ public class PlaceholderTest {
     }
 
     @Test
-    public void SimpleQueryTest(){
+    public void SimpleQueryTest() {
         Map<Integer, String> values = new HashMap<>();
         values.put(1, "123");
         values.put(2, "'hello world'");

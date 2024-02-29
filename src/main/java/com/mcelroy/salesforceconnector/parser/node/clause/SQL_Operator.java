@@ -9,7 +9,7 @@ public class SQL_Operator extends SQL_Node {
     SQL_Token.OperatorType operatorType;
     SQL_Node rhs;
 
-    public SQL_Operator(SQL_Node lhs, SQL_Token.OperatorType operatorType, SQL_Node rhs){
+    public SQL_Operator(SQL_Node lhs, SQL_Token.OperatorType operatorType, SQL_Node rhs) {
         this.lhs = lhs;
         this.operatorType = operatorType;
         this.rhs = rhs;

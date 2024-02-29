@@ -10,7 +10,7 @@ public class SQL_Having extends SQL_Node {
 
     private SQL_Clause clause;
 
-    public SQL_Having(SQL_Token.SQL_TokenIterator tokenIterator){
+    public SQL_Having(SQL_Token.SQL_TokenIterator tokenIterator) {
         clause = new SQL_Clause(tokenIterator);
     }
 

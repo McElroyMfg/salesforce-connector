@@ -6,7 +6,7 @@ import java.sql.SQLException;
 public class SFResultSetMetaData implements ResultSetMetaData {
     private SFResultSet rs;
 
-    protected SFResultSetMetaData(SFResultSet rs){
+    protected SFResultSetMetaData(SFResultSet rs) {
         this.rs = rs;
     }
 

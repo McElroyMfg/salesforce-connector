@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 package com.mcelroy.salesforceconnector.parser.exception;
 
-public class PlaceholderException extends RuntimeException{
-    public PlaceholderException(){
+public class PlaceholderException extends RuntimeException {
+    public PlaceholderException() {
         super("Missing placeholder value");
     }
 }

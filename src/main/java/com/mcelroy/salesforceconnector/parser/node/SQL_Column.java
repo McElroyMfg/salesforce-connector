@@ -17,7 +17,7 @@ public class SQL_Column extends SQL_Node {
     private String tableAlias;
     private Boolean ascending;
 
-    public SQL_Column(SQL_Token.SQL_TokenIterator tokenIterator, ColumnType columnType){
+    public SQL_Column(SQL_Token.SQL_TokenIterator tokenIterator, ColumnType columnType) {
         this.columnType = columnType;
         SQL_Token t = tokenIterator.get("column name");
         this.name = t.getValue();
@@ -28,8 +28,8 @@ public class SQL_Column extends SQL_Node {
                 t = tokenIterator.get("column alias");
                 this.alias = t.getValue();
             }
-        }else if(columnType == ColumnType.ORDER && p != null){
-            if(p.is(ASC, DESC)){
+        } else if (columnType == ColumnType.ORDER && p != null) {
+            if (p.is(ASC, DESC)) {
                 tokenIterator.next(); // consume peek
                 this.ascending = p.is(ASC);
             }
@@ -37,13 +37,13 @@ public class SQL_Column extends SQL_Node {
     }
 
 
-    public SQL_Column(String name, ColumnType columnType){
+    public SQL_Column(String name, ColumnType columnType) {
         this.columnType = columnType;
         this.name = name;
     }
 
-    protected void updateTableAlias(SQL_Table table){
-        if(table.getAlias() != null) {
+    protected void updateTableAlias(SQL_Table table) {
+        if (table.getAlias() != null) {
             String prefix = table.getAlias() + ".";
             if (name.startsWith(prefix)) {
                 tableAlias = table.getAlias();
@@ -52,9 +52,9 @@ public class SQL_Column extends SQL_Node {
         }
     }
 
-    protected void updateAliasName(List<SQL_Column> selectColumns){
-        for(SQL_Column c : selectColumns){
-            if( this.name.equals(c.alias) || this.name.equals(c.name)){
+    protected void updateAliasName(List<SQL_Column> selectColumns) {
+        for (SQL_Column c : selectColumns) {
+            if (this.name.equals(c.alias) || this.name.equals(c.name)) {
                 this.name = c.name;
                 this.alias = c.alias;
                 this.tableAlias = c.tableAlias;
@@ -85,14 +85,14 @@ public class SQL_Column extends SQL_Node {
 
     @Override
     public String toString() {
-        if(columnType == ColumnType.SELECT) {
+        if (columnType == ColumnType.SELECT) {
             if (alias != null)
                 return (tableAlias != null ? tableAlias + "." : "") + name + " AS " + alias;
             else
                 return (tableAlias != null ? tableAlias + "." : "") + name;
-        }else{
+        } else {
             String out = (tableAlias != null ? tableAlias + "." : "") + (alias != null ? alias : name);
-            if(ascending != null)
+            if (ascending != null)
                 return out + (ascending ? " ASC" : " DESC");
             else
                 return out;
