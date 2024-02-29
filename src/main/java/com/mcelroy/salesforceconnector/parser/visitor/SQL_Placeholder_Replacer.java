@@ -4,8 +4,8 @@ package com.mcelroy.salesforceconnector.parser.visitor;
 
 import com.mcelroy.salesforceconnector.parser.exception.PlaceholderException;
 import com.mcelroy.salesforceconnector.parser.node.SQL_Node;
-import com.mcelroy.salesforceconnector.parser.node.clause.SQL_Placeholder;
-import com.mcelroy.salesforceconnector.parser.node.clause.SQL_Value;
+import com.mcelroy.salesforceconnector.parser.node.SQL_Placeholder;
+import com.mcelroy.salesforceconnector.parser.node.SQL_Value;
 
 import java.util.Map;
 

@@ -217,6 +217,7 @@ public class SFResultSet implements ResultSet {
                 wasNull = true;
                 return null;
             }
+            wasNull = false;
             String v = object.optString(getKey(object, path[path.length - 1]), null);
             return v;
         } else {

@@ -2,6 +2,8 @@ package com.mcelroy.salesforceconnector.parser.node.clause;
 
 import com.mcelroy.salesforceconnector.parser.SQL_Token;
 import com.mcelroy.salesforceconnector.parser.node.SQL_Node;
+import com.mcelroy.salesforceconnector.parser.node.SQL_Placeholder;
+import com.mcelroy.salesforceconnector.parser.node.SQL_Value;
 import com.mcelroy.salesforceconnector.parser.visitor.SQL_Visitor;
 
 import java.util.ArrayList;

@@ -6,43 +6,46 @@ import com.mcelroy.salesforceconnector.parser.SQL_Token;
 import com.mcelroy.salesforceconnector.parser.visitor.SQL_Visitor;
 
 import static com.mcelroy.salesforceconnector.parser.SQL_Token.KeywordType.OFFSET;
+import static com.mcelroy.salesforceconnector.parser.SQL_Token.TokenType.PLACE_HOLDER;
 
 public class SQL_Limit extends SQL_Node {
 
-    private String limit;
-    private String offset;
+    private SQL_Node limit;
+    private SQL_Offset offset;
 
     public SQL_Limit(SQL_Token.SQL_TokenIterator tokenIterator) {
-        SQL_Token t = tokenIterator.get("limit value");
-        limit = t.getValue();
+        SQL_Token t = tokenIterator.get("limit value", PLACE_HOLDER);
+        if (t.is(PLACE_HOLDER))
+            limit = new SQL_Placeholder();
+        else
+            limit = new SQL_Value(t.getValue());
         if (tokenIterator.hasNext()) {
             t = tokenIterator.peek();
             if (t.is(OFFSET)) {
-                tokenIterator.next(); //skip peek
-                t = tokenIterator.get("offset value");
-                offset = t.getValue();
+                tokenIterator.next(); // consume peek
+                offset = new SQL_Offset(tokenIterator);
             }
         }
     }
 
-    public String getLimit() {
+    public SQL_Node getValue() {
         return limit;
     }
 
-    public String getOffset() {
+    public SQL_Node getOffset() {
         return offset;
     }
 
     @Override
     public void accept(SQL_Visitor visitor) {
         super.accept(visitor);
+        limit.accept(visitor);
+        if (offset != null)
+            offset.accept(visitor);
     }
 
     @Override
     public String toString() {
-        if (offset != null)
-            return "LIMIT " + limit + " OFFSET " + offset;
-        else
-            return "LIMIT " + limit;
+        return "LIMIT";
     }
 }

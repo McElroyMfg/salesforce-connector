@@ -1,4 +1,4 @@
-package com.mcelroy.salesforceconnector.parser.node.clause;
+package com.mcelroy.salesforceconnector.parser.node;
 
 import com.mcelroy.salesforceconnector.parser.node.SQL_Node;
 import com.mcelroy.salesforceconnector.parser.visitor.SQL_Visitor;
