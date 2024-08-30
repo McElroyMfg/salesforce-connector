@@ -83,14 +83,14 @@ public class ParserTest {
     public void IsQueryTest() {
         SQL_Statement s = SQL_Statement.parse("select cola from tab where colb is null");
         assertEquals("SELECT cola FROM tab WHERE colb IS NULL", sql(s));
-        assertEquals("SELECT cola FROM tab WHERE colb IS NULL", soql(s));
+        assertEquals("SELECT cola FROM tab WHERE colb = NULL", soql(s));
     }
 
     @Test
     public void IsNotQueryTest() {
         SQL_Statement s = SQL_Statement.parse("select cola from tab where colb is not null");
         assertEquals("SELECT cola FROM tab WHERE colb IS NOT NULL", sql(s));
-        assertEquals("SELECT cola FROM tab WHERE colb IS NOT NULL", soql(s));
+        assertEquals("SELECT cola FROM tab WHERE colb != NULL", soql(s));
     }
 
     @Test
@@ -104,6 +104,6 @@ public class ParserTest {
     public void ComplexQueryTest() {
         SQL_Statement s = SQL_Statement.parse("select cola from tab where colb in (?, ?) and colc is not null or cold < -3.4");
         assertEquals("SELECT cola FROM tab WHERE colb IN ( ?, ? ) AND colc IS NOT NULL OR cold < -3.4", sql(s));
-        assertEquals("SELECT cola FROM tab WHERE colb IN ( ?, ? ) AND colc IS NOT NULL OR cold < -3.4", soql(s));
+        assertEquals("SELECT cola FROM tab WHERE colb IN ( ?, ? ) AND colc != NULL OR cold < -3.4", soql(s));
     }
 }

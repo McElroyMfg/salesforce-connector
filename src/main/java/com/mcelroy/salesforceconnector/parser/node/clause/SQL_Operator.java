@@ -15,6 +15,10 @@ public class SQL_Operator extends SQL_Node {
         this.rhs = rhs;
     }
 
+    public SQL_Token.OperatorType getOperatorType() {
+        return this.operatorType;
+    }
+
     @Override
     public void accept(SQL_Visitor visitor) {
         lhs.accept(visitor);
