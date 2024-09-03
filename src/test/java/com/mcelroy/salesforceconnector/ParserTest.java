@@ -106,4 +106,18 @@ public class ParserTest {
         assertEquals("SELECT cola FROM tab WHERE colb IN ( ?, ? ) AND colc IS NOT NULL OR cold < -3.4", sql(s));
         assertEquals("SELECT cola FROM tab WHERE colb IN ( ?, ? ) AND colc != NULL OR cold < -3.4", soql(s));
     }
+
+    @Test
+    public void CountFunctionTest() {
+        SQL_Statement s = SQL_Statement.parse("select count(*) from tab where colb = 2");
+        assertEquals("SELECT count ( * ) FROM tab WHERE colb = 2", sql(s));
+        assertEquals("SELECT count ( ) FROM tab WHERE colb = 2", soql(s));
+    }
+
+    @Test
+    public void CountAliasFunctionTest() {
+        SQL_Statement s = SQL_Statement.parse("select count(*) as total from tab where colb = 2");
+        assertEquals("SELECT count ( * ) AS total FROM tab WHERE colb = 2", sql(s));
+        assertEquals("SELECT count ( ) FROM tab WHERE colb = 2", soql(s));
+    }
 }

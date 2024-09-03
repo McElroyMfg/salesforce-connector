@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: MIT
 package com.mcelroy.salesforceconnector.parser.visitor;
 
-import com.mcelroy.salesforceconnector.parser.node.SQL_Column_List;
-import com.mcelroy.salesforceconnector.parser.node.SQL_Node;
+import com.mcelroy.salesforceconnector.parser.node.*;
 import com.mcelroy.salesforceconnector.parser.node.clause.SQL_Group;
 import com.mcelroy.salesforceconnector.parser.node.clause.SQL_List;
 
@@ -28,6 +27,8 @@ public class SQL_Writer implements SQL_Visitor {
             write(node.toString());
             inList = true;
             firstListItem = true;
+        } else if (node instanceof SQL_Column_Alias || node instanceof SQL_Column_Sort || node instanceof SQL_Column_Function) {
+            append(node.toString());
         } else {
             write(node.toString());
         }
@@ -43,6 +44,10 @@ public class SQL_Writer implements SQL_Visitor {
         } else if (node instanceof SQL_Column_List) {
             inList = false;
         }
+    }
+
+    protected void append(String v) {
+        b.append(" ").append(v);
     }
 
     protected void write(String v) {
