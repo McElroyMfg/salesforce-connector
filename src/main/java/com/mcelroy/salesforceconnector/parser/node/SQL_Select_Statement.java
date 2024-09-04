@@ -39,6 +39,8 @@ public class SQL_Select_Statement extends SQL_Statement {
             if (t.is(ORDER)) {
                 tokenIterator.get(BY);
                 order_by = new SQL_Order_By(tokenIterator);
+                if (tokenIterator.hasNext())
+                    t = tokenIterator.get(LIMIT);
             }
 
             if (t.is(LIMIT)) {

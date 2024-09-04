@@ -17,6 +17,6 @@ public class SQL_Column_Sort extends SQL_Node {
 
     @Override
     public String toString() {
-        return token.getValue();
+        return token.is(ASC) ? "ASC" : "DESC";
     }
 }

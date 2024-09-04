@@ -66,6 +66,13 @@ public class ParserTest {
     }
 
     @Test
+    public void SimpleOrderLimitQueryTest() {
+        SQL_Statement s = SQL_Statement.parse("select t.cola from tab t order by t.colb desc limit 10");
+        assertEquals("SELECT t.cola FROM tab t ORDER BY t.colb DESC LIMIT 10", sql(s));
+        assertEquals("SELECT t.cola FROM tab t ORDER BY t.colb DESC LIMIT 10", soql(s));
+    }
+
+    @Test
     public void BasicLimitOffsetQueryTest() {
         SQL_Statement s = SQL_Statement.parse("select t.cola from tab t where cola = 1 limit 10 offset 20");
         assertEquals("SELECT t.cola FROM tab t WHERE t.cola = 1 LIMIT 10 OFFSET 20", sql(s));
