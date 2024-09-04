@@ -138,4 +138,24 @@ public class JdbcTest {
 
         assertEquals(false, error);
     }
+
+    @Test
+    public void CountQueryTest() throws Exception {
+
+        SFClientConnection clientConnection = mock(SFClientConnection.class);
+        SFConnection connection = spy(new SFConnection(null));
+        doReturn(clientConnection).when(connection).getClientConnection();
+
+        JSONObject response = new JSONObject("{totalSize: 10, records: []}");
+        String sql = "select count(*) as tot from Account";
+
+        when(clientConnection.query(getQuery(sql))).thenReturn(response);
+
+        Statement statement = connection.createStatement();
+        statement.executeQuery(sql);
+        ResultSet rs = statement.getResultSet();
+
+        assertEquals(true, rs.next());
+        assertEquals(10, rs.getInt("tot"));
+    }
 }

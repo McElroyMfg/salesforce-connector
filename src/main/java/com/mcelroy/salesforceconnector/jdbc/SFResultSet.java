@@ -2,12 +2,10 @@
 // SPDX-License-Identifier: MIT
 package com.mcelroy.salesforceconnector.jdbc;
 
-import com.mcelroy.salesforceconnector.parser.node.SQL_Column;
-import com.mcelroy.salesforceconnector.parser.node.SQL_Node;
-import com.mcelroy.salesforceconnector.parser.node.SQL_Statement;
-import com.mcelroy.salesforceconnector.parser.node.SQL_Table;
+import com.mcelroy.salesforceconnector.parser.node.*;
 import com.mcelroy.salesforceconnector.parser.visitor.SQL_Visitor;
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.InputStream;
@@ -50,8 +48,20 @@ public class SFResultSet implements ResultSet {
                             selectColumnAliasMap.put(c.getAlias(), c.getName());
                     }
                 }
+
                 if (node instanceof SQL_Table)
                     tableName = ((SQL_Table) node).getName();
+
+                if (node instanceof SQL_Column_Function) {
+                    if (((SQL_Column_Function) node).getName().equals("COUNT")) {
+                        JSONObject row = new JSONObject();
+                        try {
+                            row.put(selectColumnNames.get(0), result.optInt("totalSize", 0));
+                        } catch (JSONException e) {
+                        }
+                        rows.add(row);
+                    }
+                }
             }
 
             @Override
