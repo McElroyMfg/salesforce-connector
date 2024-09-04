@@ -10,6 +10,10 @@ public class SFDialect extends Dialect {
         return true;
     }
 
+    public boolean bindLimitParametersInReverseOrder() {
+        return true;
+    }
+
     public String getLimitString(String sql, boolean hasOffset) {
         return (new StringBuffer(sql.length() + 20)).append(sql).append(hasOffset ? " limit ? offset ?" : " limit ?").toString();
     }
