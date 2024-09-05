@@ -4,6 +4,7 @@ package com.mcelroy.salesforceconnector.parser.node;
 
 import com.mcelroy.salesforceconnector.parser.SQL_Token;
 
+import static com.mcelroy.salesforceconnector.parser.SQL_Token.KeywordType.CATALOG;
 import static com.mcelroy.salesforceconnector.parser.SQL_Token.KeywordType.SELECT;
 import static com.mcelroy.salesforceconnector.parser.SQL_Token.TokenType.KEY_WORD;
 
@@ -21,6 +22,8 @@ public class SQL_Statement extends SQL_Node {
         if (t.is(KEY_WORD)) {
             if (t.is(SELECT)) {
                 return new SQL_Select_Statement(tokenIterator);
+            } else if (t.is(CATALOG)) {
+                return new SQL_Catalog_Statement(tokenIterator);
             } else {
                 throw new RuntimeException("Statement type " + t.getValue() + " is not supported");
             }

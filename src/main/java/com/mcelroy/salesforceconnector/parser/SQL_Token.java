@@ -15,7 +15,7 @@ public class SQL_Token {
 
     public enum TokenType implements TokenizerType {KEY_WORD, COMMA, GROUP_OPEN, GROUP_CLOSE, OPERATOR, QUOTE, WORD, PLACE_HOLDER}
 
-    public enum KeywordType implements TokenizerType {SELECT, INSERT, DELETE, UPDATE, FROM, WHERE, HAVING, GROUP, ORDER, BY, ASC, DESC, AS, LIMIT, OFFSET, NULL}
+    public enum KeywordType implements TokenizerType {SELECT, INSERT, DELETE, UPDATE, CATALOG, FROM, WHERE, HAVING, GROUP, ORDER, BY, ASC, DESC, AS, LIMIT, OFFSET, NULL}
 
     public enum OperatorType implements TokenizerType {
         AND, OR, LIKE, IN, IS, NOT, IS_NOT("IS NOT"),

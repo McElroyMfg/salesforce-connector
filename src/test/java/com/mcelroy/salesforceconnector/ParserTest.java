@@ -127,4 +127,11 @@ public class ParserTest {
         assertEquals("SELECT count ( * ) AS total FROM tab WHERE colb = 2", sql(s));
         assertEquals("SELECT count ( ) FROM tab WHERE colb = 2", soql(s));
     }
+
+    @Test
+    public void CatalogTest() {
+        SQL_Statement s = SQL_Statement.parse("catalog staging");
+        assertEquals("CATALOG staging", sql(s));
+        assertEquals("CATALOG staging", soql(s));
+    }
 }

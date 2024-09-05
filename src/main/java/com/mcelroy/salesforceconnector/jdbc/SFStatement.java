@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 package com.mcelroy.salesforceconnector.jdbc;
 
+import com.mcelroy.salesforceconnector.parser.node.SQL_Catalog_Statement;
 import com.mcelroy.salesforceconnector.parser.node.SQL_Statement;
 import com.mcelroy.salesforceconnector.parser.visitor.SOQL_Writer;
 import com.mcelroy.salesforceconnector.parser.visitor.SQL_Placeholder_Replacer;
@@ -34,6 +35,12 @@ public class SFStatement implements Statement {
         if (placeholderValues != null)
             writer = new SQL_Placeholder_Replacer(writer, placeholderValues);
         sql_statement.accept(writer);
+
+        if(sql_statement instanceof SQL_Catalog_Statement){
+            executeUpdate(b.toString());
+            return null;
+        }
+
         resultSet = new SFResultSet(this, sql_statement, apiConnection.query(b.toString()));
         return resultSet;
     }

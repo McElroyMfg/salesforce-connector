@@ -158,4 +158,17 @@ public class JdbcTest {
         assertEquals(true, rs.next());
         assertEquals(10, rs.getInt("tot"));
     }
+
+    @Test
+    public void CatalogSetTest() throws Exception {
+
+        SFClientConnection clientConnection = mock(SFClientConnection.class);
+        SFConnection connection = spy(new SFConnection(null));
+        doReturn(clientConnection).when(connection).getClientConnection();
+
+        PreparedStatement statement = connection.prepareStatement("catalog demo");
+        statement.executeUpdate();
+
+        verify(connection, times(1)).setCatalog("demo");
+    }
 }
