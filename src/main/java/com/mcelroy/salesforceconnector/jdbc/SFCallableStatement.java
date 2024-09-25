@@ -18,6 +18,7 @@ import java.util.*;
 public class SFCallableStatement extends SFPreparedStatement implements CallableStatement {
     List<String> inputNames = new ArrayList<>();
     String flowName;
+    JSONObject outParams;
 
     public SFCallableStatement(SFConnection sfConnection, SFClientConnection apiConnection, String sql) {
         super(sfConnection, apiConnection, sql);
@@ -87,13 +88,13 @@ public class SFCallableStatement extends SFPreparedStatement implements Callable
     public boolean execute() throws SQLException {
         String body = parseBody();
 
+        outParams = null;
         JSONObject response = getApiConnection().launchFlow(flowName, body);
         if (!response.optBoolean("isSuccess", true)) {
             String err = response.optString("errors", "Error calling procedure");
             throw new SQLException(err);
         }
-        JSONArray outParams = response.optJSONArray("outputValues");
-        System.out.println(outParams != null ? outParams.toString() : response);
+        outParams = response.optJSONObject("outputValues");
         return false;
     }
 
@@ -402,7 +403,10 @@ public class SFCallableStatement extends SFPreparedStatement implements Callable
 
     @Override
     public String getString(String s) throws SQLException {
-        return null;
+        if(outParams == null)
+            return null;
+        else
+            return outParams.optString(s, null);
     }
 
     @Override
