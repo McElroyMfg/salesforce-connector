@@ -171,4 +171,17 @@ public class JdbcTest {
 
         verify(connection, times(1)).setCatalog("demo");
     }
+
+    @Test
+    public void CatalogSetNullTest() throws Exception {
+
+        SFClientConnection clientConnection = mock(SFClientConnection.class);
+        SFConnection connection = spy(new SFConnection(null));
+        doReturn(clientConnection).when(connection).getClientConnection();
+
+        PreparedStatement statement = connection.prepareStatement("catalog null");
+        statement.executeUpdate();
+
+        verify(connection, times(1)).setCatalog(null);
+    }
 }
