@@ -1,5 +1,6 @@
 # salesforce-connector
 Salesforce JDBC driver using REST API v 50.
+Starting in 3.1 changed to grant_type client_credentials
 
 #### JDBC
 Currently handles queries with optional column and table alias (no insert, update, or delete statements yet) 
@@ -16,8 +17,6 @@ Now supports row updates and inserts from the ResultSet.
         Properties p = new Properties();
         p.setProperty("clientId", System.getProperty("clientId"));
         p.setProperty("clientSecret", System.getProperty("clientSecret"));
-        p.setProperty("user", System.getProperty("user"));
-        p.setProperty("password", System.getProperty("password"));
 
         try {
             Connection c = d.connect(url, p);
@@ -42,8 +41,6 @@ Now supports row updates and inserts from the ResultSet.
         Properties p = new Properties();
         p.setProperty("hibernate.connection.clientId", System.getProperty("clientId"));
         p.setProperty("hibernate.connection.clientSecret", System.getProperty("clientSecret"));
-        p.setProperty("hibernate.connection.user", System.getProperty("user"));
-        p.setProperty("hibernate.connection.password", System.getProperty("password"));
         p.setProperty("hibernate.connection.url", url);
         p.setProperty("hibernate.dialect", "com.mcelroy.salesforceconnector.jdbc.SFDialect");
         p.setProperty("hibernate.show_sql", "true");

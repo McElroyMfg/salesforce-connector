@@ -28,16 +28,12 @@ public class SFRestConnection {
         private final String host;
         private final String clientId;
         private final String clientSecret;
-        private final String user;
-        private final String pass;
         private transient String accessToken;
 
         public SFRestConfig(String host, String clientId, String clientSecret, String user, String pass) {
             this.host = host;
             this.clientId = clientId;
             this.clientSecret = clientSecret;
-            this.user = user;
-            this.pass = pass;
         }
     }
 
@@ -70,11 +66,9 @@ public class SFRestConnection {
         if (config.accessToken == null || (token != null && token.equals(config.accessToken))) {
             // Get new access token
             Map<String, Object> params = new LinkedHashMap<>();
-            params.put("grant_type", "password");
+            params.put("grant_type", "client_credentials");
             params.put("client_id", config.clientId);
             params.put("client_secret", config.clientSecret);
-            params.put("username", config.user);
-            params.put("password", config.pass);
             try {
                 token = null;
                 JSONObject resp = logIn(config.host + "services/oauth2/token", params);
