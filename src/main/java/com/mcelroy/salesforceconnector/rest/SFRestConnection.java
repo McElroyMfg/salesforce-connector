@@ -12,6 +12,11 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
+import java.security.KeyFactory;
+import java.security.PrivateKey;
+import java.security.Signature;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -28,12 +33,16 @@ public class SFRestConnection {
         private final String host;
         private final String clientId;
         private final String clientSecret;
+        private final String user;
+        private final String privateKey; // PEM RSA key; when present JWT bearer flow is used instead of client credentials
         private transient String accessToken;
 
-        public SFRestConfig(String host, String clientId, String clientSecret, String user, String pass) {
+        public SFRestConfig(String host, String clientId, String clientSecret, String user, String privateKey) {
             this.host = host;
             this.clientId = clientId;
             this.clientSecret = clientSecret;
+            this.user = user;
+            this.privateKey = privateKey;
         }
     }
 
@@ -66,10 +75,17 @@ public class SFRestConnection {
         if (config.accessToken == null || (token != null && token.equals(config.accessToken))) {
             // Get new access token
             Map<String, Object> params = new LinkedHashMap<>();
-            params.put("grant_type", "client_credentials");
-            params.put("client_id", config.clientId);
-            params.put("client_secret", config.clientSecret);
             try {
+                if (config.privateKey != null && !config.privateKey.trim().isEmpty()) {
+                    // JWT bearer flow
+                    params.put("grant_type", "urn:ietf:params:oauth:grant-type:jwt-bearer");
+                    params.put("assertion", buildJwtAssertion());
+                } else {
+                    // client credentials flow
+                    params.put("grant_type", "client_credentials");
+                    params.put("client_id", config.clientId);
+                    params.put("client_secret", config.clientSecret);
+                }
                 token = null;
                 JSONObject resp = logIn(config.host + "services/oauth2/token", params);
                 if (resp != null)
@@ -81,6 +97,46 @@ public class SFRestConnection {
         }
 
         token = config.accessToken; // set connection token to current access token
+    }
+
+
+    private String buildJwtAssertion() throws Exception {
+        if (config.user == null || config.user.trim().isEmpty())
+            throw new IllegalArgumentException("user property is required for JWT authentication");
+
+        String header = base64Url("{\"alg\":\"RS256\"}");
+        String claims = base64Url(new JSONObject()
+                .put("iss", config.clientId)
+                .put("sub", config.user)
+                .put("aud", config.host.replaceAll("/$", "")) // jdbc host without trailing slash
+                .put("exp", System.currentTimeMillis() / 1000 + 180) // salesforce rejects exp more than 3 minutes in the future
+                .toString());
+        String input = header + "." + claims;
+
+        Signature signature = Signature.getInstance("SHA256withRSA");
+        signature.initSign(loadPrivateKey(config.privateKey));
+        signature.update(input.getBytes(StandardCharsets.US_ASCII));
+
+        return input + "." + base64Url(signature.sign());
+    }
+
+
+    private static String base64Url(String s) {
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(s.getBytes(StandardCharsets.UTF_8));
+    }
+
+
+    private static String base64Url(byte[] b) {
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(b);
+    }
+
+
+    private static PrivateKey loadPrivateKey(String pem) throws Exception {
+        String der = pem.replaceAll("-----BEGIN [A-Z ]+-----", "")
+                .replaceAll("-----END [A-Z ]+-----", "")
+                .replaceAll("\\s", "");
+        return KeyFactory.getInstance("RSA")
+                .generatePrivate(new PKCS8EncodedKeySpec(Base64.getDecoder().decode(der)));
     }
 
 

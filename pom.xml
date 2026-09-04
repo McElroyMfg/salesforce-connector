@@ -4,7 +4,7 @@
     <groupId>com.mcelroy</groupId>
     <artifactId>salesforce-connector</artifactId>
     <packaging>jar</packaging>
-    <version>3.1</version>
+    <version>3.2</version>
 
     <name>Salesforce Connector</name>
 
@@ -17,7 +17,7 @@
         <dependency>
             <groupId>org.json</groupId>
             <artifactId>json</artifactId>
-            <version>20090211</version>
+            <version>20240303</version>
         </dependency>
         <dependency>
             <groupId>org.hibernate</groupId>
@@ -56,6 +56,37 @@
                     <source>1.8</source>
                     <target>1.8</target>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.5.1</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <relocations>
+                                <relocation>
+                                    <pattern>org.json</pattern>
+                                    <shadedPattern>com.mcelroy.salesforceconnector.shaded.json</shadedPattern>
+                                </relocation>
+                            </relocations>
+                            <filters>
+                                <filter>
+                                    <artifact>*:*</artifact>
+                                    <excludes>
+                                        <exclude>META-INF/*.SF</exclude>
+                                        <exclude>META-INF/*.DSA</exclude>
+                                        <exclude>META-INF/*.RSA</exclude>
+                                    </excludes>
+                                </filter>
+                            </filters>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

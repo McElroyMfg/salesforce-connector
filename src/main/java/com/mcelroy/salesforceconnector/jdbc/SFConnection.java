@@ -18,6 +18,11 @@ public class SFConnection implements Connection {
         this.client = client;
     }
 
+    public SFConnection(SFClient client, String environment) {
+        this.client = client;
+        this.environment = environment;
+    }
+
     public SFClientConnection getClientConnection() {
         return client.getConnection(environment);
     }

@@ -16,20 +16,24 @@ public class SFDataSource implements DataSource {
     private String clientId;
     private String clientSecret;
     private String user;
-    private String password;
+    private String privateKey;
 
     @Override
     public Connection getConnection() throws SQLException {
-        return getConnection(user, password);
+        return getConnection(user, null);
     }
 
     @Override
     public Connection getConnection(String s, String s1) throws SQLException {
         Properties p = new Properties();
-        p.setProperty("clientId", clientId);
-        p.setProperty("clientSecret", clientSecret);
-        p.setProperty("user", user);
-        p.setProperty("password", password);
+        if (clientId != null)
+            p.setProperty("clientId", clientId);
+        if (clientSecret != null)
+            p.setProperty("clientSecret", clientSecret);
+        if (user != null)
+            p.setProperty("user", user);
+        if (privateKey != null)
+            p.setProperty("privateKey", privateKey);
         return DriverManager.getConnection(url, p);
     }
 
@@ -103,12 +107,12 @@ public class SFDataSource implements DataSource {
         this.user = user;
     }
 
-    public String getPassword() {
-        return password;
+    public String getPrivateKey() {
+        return privateKey;
     }
 
-    public void setPassword(String password) {
-        this.password = password;
+    public void setPrivateKey(String privateKey) {
+        this.privateKey = privateKey;
     }
 
     static {

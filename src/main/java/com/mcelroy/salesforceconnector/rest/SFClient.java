@@ -10,7 +10,7 @@ public class SFClient {
     private final String clientId;
     private final String clientSecret;
     private final String user;
-    private final String pass;
+    private final String privateKey;
 
     SFRestConnection.SFRestConfig production = null;
     Map<String, SFRestConnection.SFRestConfig> sandboxes = new LinkedHashMap<String, SFRestConnection.SFRestConfig>() {
@@ -21,19 +21,19 @@ public class SFClient {
     };
 
 
-    public SFClient(String host, String clientId, String clientSecret, String user, String pass) {
+    public SFClient(String host, String clientId, String clientSecret, String user, String privateKey) {
         this.host = host;
         this.clientId = clientId;
         this.clientSecret = clientSecret;
         this.user = user;
-        this.pass = pass;
+        this.privateKey = privateKey;
     }
 
 
     public synchronized SFClientConnection getConnection(String sandboxName) {
         if (sandboxName == null || sandboxName.trim().equals("")) {
             if (production == null) {
-                production = new SFRestConnection.SFRestConfig(host, clientId, clientSecret, user, pass);
+                production = new SFRestConnection.SFRestConfig(host, clientId, clientSecret, user, privateKey);
             }
             return new SFClientConnection(production);
         } else {
@@ -41,7 +41,7 @@ public class SFClient {
             if (config == null) {
                 String sbHost = host.replaceFirst("\\.", "--" + sandboxName + ".sandbox."); // SF domain change required summer 2022
                 String sbUser = user + "." + sandboxName;
-                config = new SFRestConnection.SFRestConfig(sbHost, clientId, clientSecret, sbUser, pass);
+                config = new SFRestConnection.SFRestConfig(sbHost, clientId, clientSecret, sbUser, privateKey);
                 sandboxes.put(sandboxName, config);
             }
             return new SFClientConnection(config);

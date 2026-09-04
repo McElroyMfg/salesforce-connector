@@ -17,22 +17,47 @@ public class SFDriver implements Driver {
     public Connection connect(String s, Properties properties) throws SQLException {
         if (acceptsURL(s)) {
             String url = s.trim().replace("jdbc:sf:", "");
+            String environment = null;
+
+            // an optional sandbox name may follow the host: jdbc:sf:https://host/mysandbox
+            int pathStart = url.indexOf('/', url.indexOf("//") + 2);
+            if (pathStart >= 0) {
+                String path = url.substring(pathStart + 1);
+                if (!path.trim().isEmpty())
+                    environment = path.trim();
+                url = url.substring(0, pathStart + 1);
+            }
+
             if (!url.endsWith("/"))
                 url = url + "/";
             String user = properties.getProperty("user");
-            String password = properties.getProperty("password");
             String clientId = properties.getProperty("clientId");
             String clientSecret = properties.getProperty("clientSecret");
-            String key = url + user + clientId;
+            String privateKey = properties.getProperty("privateKey");
+
+            boolean jwt = privateKey != null && !privateKey.trim().isEmpty();
+
+            if (clientId == null || clientId.trim().isEmpty())
+                throw new SQLException("clientId property is required");
+            if (jwt) {
+                if (user == null || user.trim().isEmpty())
+                    throw new SQLException("user property is required for JWT authentication");
+            } else {
+                if (clientSecret == null || clientSecret.trim().isEmpty())
+                    throw new SQLException("clientSecret property is required for client credentials authentication");
+            }
+
+            String key = url + user + clientId + "@"
+                    + (privateKey == null ? "" : Integer.toHexString(privateKey.hashCode()));
             SFClient client;
             synchronized (clients) {
                 client = clients.get(key);
                 if (client == null) {
-                    client = new SFClient(url, clientId, clientSecret, user, password);
+                    client = new SFClient(url, clientId, clientSecret, user, privateKey);
                     clients.put(key, client);
                 }
             }
-            SFConnection connection = new SFConnection(client);
+            SFConnection connection = new SFConnection(client, environment);
             return connection;
         }
         return null;
