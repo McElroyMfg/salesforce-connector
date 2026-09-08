@@ -34,6 +34,11 @@ public class SFDriver implements Driver {
             String clientId = properties.getProperty("clientId");
             String clientSecret = properties.getProperty("clientSecret");
             String privateKey = properties.getProperty("privateKey");
+            String password = properties.getProperty("password"); // tolerated for compatibility
+
+            // some applications always set password (even blank); accept it, and
+            // allow it as a backup way to supply the JWT private key
+            privateKey = resolvePrivateKey(privateKey, password);
 
             boolean jwt = privateKey != null && !privateKey.trim().isEmpty();
 
@@ -68,9 +73,52 @@ public class SFDriver implements Driver {
         return s != null && s.startsWith("jdbc:sf:");
     }
 
+    /**
+     * Resolves the JWT private key from the driver properties.
+     * An explicit {@code privateKey} wins; otherwise a {@code password} that
+     * contains a PEM private key is used as a backup way to supply the key.
+     * A blank or real password is ignored (some applications always set it).
+     */
+    public static String resolvePrivateKey(String privateKey, String password) {
+        if (privateKey != null && !privateKey.trim().isEmpty())
+            return privateKey; // explicit privateKey wins
+        if (password != null && password.contains("PRIVATE KEY"))
+            return password; // PEM key pasted into the password field
+        return privateKey; // blank/real password -> ignored
+    }
+
     @Override
     public DriverPropertyInfo[] getPropertyInfo(String s, Properties properties) throws SQLException {
-        return new DriverPropertyInfo[0];
+        if (!acceptsURL(s))
+            return new DriverPropertyInfo[0];
+
+        Properties info = properties == null ? new Properties() : properties;
+        String privateKey = resolvePrivateKey(
+                info.getProperty("privateKey"),
+                info.getProperty("password"));
+
+        DriverPropertyInfo[] p = new DriverPropertyInfo[5];
+        p[0] = new DriverPropertyInfo("clientId", info.getProperty("clientId"));
+        p[0].required = true;
+        p[0].description = "Salesforce Connected App consumer key";
+
+        p[1] = new DriverPropertyInfo("clientSecret", null); // never echo secrets back to the caller
+        p[1].required = privateKey == null || privateKey.trim().isEmpty();
+        p[1].description = "Connected App consumer secret (required for client credentials authentication)";
+
+        p[2] = new DriverPropertyInfo("user", info.getProperty("user"));
+        p[2].required = privateKey != null && !privateKey.trim().isEmpty();
+        p[2].description = "Salesforce username (required for JWT authentication, used as the JWT sub claim)";
+
+        p[3] = new DriverPropertyInfo("privateKey", null); // never echo secrets back to the caller
+        p[3].required = false;
+        p[3].description = "PKCS#8 PEM RSA private key; presence selects JWT bearer authentication";
+
+        p[4] = new DriverPropertyInfo("password", null); // never echo secrets back to the caller
+        p[4].required = false;
+        p[4].description = "Accepted for compatibility; if privateKey is not set and this contains a PEM private key it is used as the JWT signing key";
+
+        return p;
     }
 
     @Override

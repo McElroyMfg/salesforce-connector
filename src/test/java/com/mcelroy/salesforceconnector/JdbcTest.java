@@ -1,6 +1,7 @@
 package com.mcelroy.salesforceconnector;
 
 import com.mcelroy.salesforceconnector.jdbc.SFConnection;
+import com.mcelroy.salesforceconnector.jdbc.SFDriver;
 import com.mcelroy.salesforceconnector.parser.node.SQL_Statement;
 import com.mcelroy.salesforceconnector.parser.visitor.SOQL_Writer;
 import com.mcelroy.salesforceconnector.parser.visitor.SQL_Placeholder_Replacer;
@@ -15,6 +16,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Properties;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
@@ -183,5 +185,72 @@ public class JdbcTest {
         statement.executeUpdate();
 
         verify(connection, times(1)).setCatalog(null);
+    }
+
+    @Test
+    public void PasswordPropertyTest() {
+        String key = "-----BEGIN PRIVATE KEY-----\nMIIEvQ...\n-----END PRIVATE KEY-----";
+
+        // blank or real password is ignored
+        assertNull(SFDriver.resolvePrivateKey(null, null));
+        assertNull(SFDriver.resolvePrivateKey(null, ""));
+        assertNull(SFDriver.resolvePrivateKey(null, "   "));
+        assertNull(SFDriver.resolvePrivateKey(null, "realpassword"));
+
+        // PEM key in the password field is used as a backup way to set the JWT key
+        assertEquals(key, SFDriver.resolvePrivateKey(null, key));
+
+        // explicit privateKey wins over password
+        assertEquals(key, SFDriver.resolvePrivateKey(key, "ignored"));
+        assertEquals(key, SFDriver.resolvePrivateKey(key, null));
+    }
+
+    @Test
+    public void GetPropertyInfoTest() throws Exception {
+        SFDriver driver = new SFDriver();
+        String url = "jdbc:sf:https://mycompany.my.salesforce.com";
+
+        // no properties: client credentials is the default flow
+        DriverPropertyInfo[] info = driver.getPropertyInfo(url, new Properties());
+        assertEquals(5, info.length);
+        assertEquals("clientId", info[0].name);
+        assertEquals(true, info[0].required);
+        assertEquals("clientSecret", info[1].name);
+        assertEquals(true, info[1].required);
+        assertEquals("user", info[2].name);
+        assertEquals(false, info[2].required);
+        assertEquals("privateKey", info[3].name);
+        assertEquals("password", info[4].name);
+
+        // with a private key the JWT flow is selected
+        Properties p = new Properties();
+        p.setProperty("privateKey", "-----BEGIN PRIVATE KEY-----");
+        info = driver.getPropertyInfo(url, p);
+        assertEquals(false, info[1].required); // clientSecret no longer required
+        assertEquals(true, info[2].required);  // user now required
+
+        // a PEM key in the password field also selects the JWT flow
+        p = new Properties();
+        p.setProperty("password", "-----BEGIN PRIVATE KEY-----");
+        info = driver.getPropertyInfo(url, p);
+        assertEquals(false, info[1].required);
+        assertEquals(true, info[2].required);
+
+        // sensitive values are never echoed back; non-secret values are
+        p = new Properties();
+        p.setProperty("clientId", "cid");
+        p.setProperty("clientSecret", "secret");
+        p.setProperty("user", "u@x.com");
+        p.setProperty("privateKey", "-----BEGIN PRIVATE KEY-----");
+        p.setProperty("password", "hunter2");
+        info = driver.getPropertyInfo(url, p);
+        assertEquals("cid", info[0].value);
+        assertEquals("u@x.com", info[2].value);
+        assertNull(info[1].value); // clientSecret
+        assertNull(info[3].value); // privateKey
+        assertNull(info[4].value); // password
+
+        // non jdbc:sf: url returns no properties
+        assertEquals(0, driver.getPropertyInfo("jdbc:other:url", null).length);
     }
 }

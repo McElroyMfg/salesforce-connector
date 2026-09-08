@@ -17,10 +17,11 @@ public class SFDataSource implements DataSource {
     private String clientSecret;
     private String user;
     private String privateKey;
+    private String password;
 
     @Override
     public Connection getConnection() throws SQLException {
-        return getConnection(user, null);
+        return getConnection(null, null);
     }
 
     @Override
@@ -34,6 +35,14 @@ public class SFDataSource implements DataSource {
             p.setProperty("user", user);
         if (privateKey != null)
             p.setProperty("privateKey", privateKey);
+        if (password != null)
+            p.setProperty("password", password);
+        // connection arguments override the configured values; some applications
+        // always pass a password (even blank) so it is also a backup way to set the JWT key
+        if (s != null)
+            p.setProperty("user", s);
+        if (s1 != null)
+            p.setProperty("password", s1);
         return DriverManager.getConnection(url, p);
     }
 
@@ -113,6 +122,14 @@ public class SFDataSource implements DataSource {
 
     public void setPrivateKey(String privateKey) {
         this.privateKey = privateKey;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
     }
 
     static {

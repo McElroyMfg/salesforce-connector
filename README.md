@@ -1,7 +1,7 @@
 # salesforce-connector
 Salesforce JDBC driver using REST API v 50.
 Starting in 3.1 changed to grant_type client_credentials
-Starting in 3.2 added JWT bearer authentication, removed the password property,
+Starting in 3.2 added JWT bearer authentication
 and added optional sandbox (catalog) selection in the JDBC URL
 
 #### Authentication
@@ -13,8 +13,11 @@ Two OAuth flows are supported, selected by which properties are provided:
 | `clientSecret` | required | not used |
 | `user` | optional | required (Salesforce username, used as the JWT `sub` claim) |
 | `privateKey` | not used | required — presence of a non-empty key selects the JWT flow |
+| `password` | ignored | optional backup for `privateKey` |
 
-The `password` property is no longer supported.
+The `password` property is accepted for compatibility (some applications always set it,
+even blank). If `privateKey` is not set and `password` contains a PEM private key, it is
+used as the JWT signing key; otherwise it is ignored.
 
 For JWT bearer authentication the Connected App must have a certificate uploaded and
 "Issue JSON Web Token (JWT)-based access tokens" enabled. The `privateKey` must be the
