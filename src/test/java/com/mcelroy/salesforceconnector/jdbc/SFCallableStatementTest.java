@@ -3,6 +3,7 @@
 package com.mcelroy.salesforceconnector.jdbc;
 
 import com.mcelroy.salesforceconnector.rest.SFClientConnection;
+import com.mcelroy.salesforceconnector.rest.SFClient;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.junit.Test;
@@ -11,6 +12,7 @@ import org.mockito.ArgumentCaptor;
 import java.math.BigDecimal;
 import java.sql.Date;
 import java.sql.SQLException;
+import java.sql.ResultSet;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.time.Instant;
@@ -372,6 +374,77 @@ public class SFCallableStatementTest {
             expectSqlException(() -> statement.getLong(name));
             expectSqlException(() -> statement.getObject(name, Long.class));
         }
+    }
+
+    @Test
+    public void oldCatalogStatementUsesOriginalClientWithoutContaminatingCurrentMetadata() throws Exception {
+        SFClient pool = mock(SFClient.class);
+        SFClientConnection clientB = mock(SFClientConnection.class);
+        when(pool.getConnection("A")).thenReturn(client);
+        when(pool.getConnection("B")).thenReturn(clientB);
+        SFConnection pooled = new SFConnection(pool, "A");
+        when(client.describeFlow("MyFlow")).thenReturn(
+                description(new String[]{"inputA"}, new String[]{"outputA"}));
+        when(clientB.describeFlow("MyFlow")).thenReturn(
+                description(new String[]{"inputB"}, new String[]{"outputB"}));
+        when(client.launchFlow(eq("MyFlow"), anyString())).thenReturn(new JSONObject()
+                .put("isSuccess", true).put("outputValues", new JSONObject().put("outputA", "A")));
+        when(clientB.launchFlow(eq("MyFlow"), anyString())).thenReturn(new JSONObject()
+                .put("isSuccess", true).put("outputValues", new JSONObject().put("outputB", "B")));
+        when(clientB.listFlows()).thenReturn(new JSONObject().put("actions",
+                new JSONArray().put(new JSONObject().put("name", "MyFlow"))));
+        SFCallableStatement old = (SFCallableStatement) pooled.prepareCall("{call MyFlow(?)}");
+        old.setString(1, "old");
+        pooled.setCatalog("B");
+        old.execute();
+        assertEquals("old", launchedInputs().getString("inputA"));
+
+        try (ResultSet columns = pooled.getMetaData().getProcedureColumns(null, null, "MyFlow", null)) {
+            assertTrue(columns.next());
+            assertEquals("inputB", columns.getString("COLUMN_NAME"));
+            assertTrue(columns.next());
+            assertEquals("outputB", columns.getString("COLUMN_NAME"));
+        }
+        old.execute();
+        assertEquals("A", old.getString(1));
+        SFCallableStatement current = (SFCallableStatement) pooled.prepareCall("{call MyFlow(?)}");
+        current.setString(1, "new");
+        current.execute();
+        assertEquals("B", current.getString(1));
+        ArgumentCaptor<String> body = ArgumentCaptor.forClass(String.class);
+        verify(clientB).launchFlow(eq("MyFlow"), body.capture());
+        assertEquals("new", new JSONObject(body.getValue()).getJSONArray("inputs")
+                .getJSONObject(0).getString("inputB"));
+        verify(clientB, times(1)).describeFlow("MyFlow");
+        verify(client, times(3)).describeFlow("MyFlow");
+    }
+
+    @Test
+    public void oldCatalogFailuresDoNotEvictCurrentCatalogDescriptions() throws Exception {
+        SFClient pool = mock(SFClient.class);
+        SFClientConnection clientB = mock(SFClientConnection.class);
+        when(pool.getConnection("A")).thenReturn(client);
+        when(pool.getConnection("B")).thenReturn(clientB);
+        SFConnection pooled = new SFConnection(pool, "A");
+        when(client.describeFlow("MyFlow")).thenReturn(description(new String[]{"inputA"}, new String[0]));
+        when(clientB.describeFlow("MyFlow")).thenReturn(description(new String[]{"inputB"}, new String[0]));
+        when(client.launchFlow(eq("MyFlow"), anyString()))
+                .thenReturn(new JSONObject().put("isSuccess", false))
+                .thenThrow(new IllegalStateException("old catalog launch failed"));
+        when(clientB.launchFlow(eq("MyFlow"), anyString()))
+                .thenReturn(new JSONObject().put("isSuccess", true));
+        SFCallableStatement old = (SFCallableStatement) pooled.prepareCall("{call MyFlow(?)}");
+        old.setInt(1, 1);
+        pooled.setCatalog("B");
+        SFCallableStatement current = (SFCallableStatement) pooled.prepareCall("{call MyFlow(?)}");
+        current.setInt(1, 2);
+        current.execute();
+        expectSqlException(old::execute);
+        current.execute();
+        expectSqlException(old::execute);
+        current.execute();
+        verify(clientB, times(1)).describeFlow("MyFlow");
+        verify(client, times(2)).describeFlow("MyFlow");
     }
 
     private interface SqlAction {

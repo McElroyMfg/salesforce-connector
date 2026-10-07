@@ -30,6 +30,7 @@ public class SFCallableStatement extends SFPreparedStatement implements Callable
     private final Map<String, Long> namedBindingOrder = new HashMap<>();
     private final Map<Integer, Long> positionalBindingOrder = new HashMap<>();
     private long bindingOrder;
+    private final String catalog;
 
     private interface ParameterBinding {
         void bind() throws SQLException;
@@ -60,6 +61,7 @@ public class SFCallableStatement extends SFPreparedStatement implements Callable
 
     public SFCallableStatement(SFConnection sfConnection, SFClientConnection apiConnection, String sql) {
         super(sfConnection, apiConnection, "call");
+        catalog = sfConnection.environment;
         params = new HashMap<Integer, String>() {
             @Override
             public String put(Integer index, String value) {
@@ -97,11 +99,20 @@ public class SFCallableStatement extends SFPreparedStatement implements Callable
 
     private JSONObject describeFlow() throws SQLException {
         try {
-            return ((SFConnection) getConnection()).getMetadataCache()
+            SFConnection connection = (SFConnection) getConnection();
+            if (!Objects.equals(catalog, connection.environment))
+                return getApiConnection().describeFlow(flowName);
+            return connection.getMetadataCache()
                     .get("flow:" + flowName, () -> getApiConnection().describeFlow(flowName));
         } catch (RuntimeException e) {
             throw new SQLException("Could not describe flow " + flowName, e);
         }
+    }
+
+    private void evictFlowDescription() throws SQLException {
+        SFConnection connection = (SFConnection) getConnection();
+        if (Objects.equals(catalog, connection.environment))
+            connection.getMetadataCache().evict("flow:" + flowName);
     }
 
     private List<String> parameterNames(String direction) throws SQLException {
@@ -193,12 +204,12 @@ public class SFCallableStatement extends SFPreparedStatement implements Callable
             JSONObject response = getApiConnection().launchFlow(flowName, body);
             if (!response.optBoolean("isSuccess", true)) {
                 String err = response.optString("errors", "Error calling procedure");
-                ((SFConnection) getConnection()).getMetadataCache().evict("flow:" + flowName);
+                evictFlowDescription();
                 throw new SQLException(err);
             }
             outParams = response.optJSONObject("outputValues");
         } catch (RuntimeException e) {
-            ((SFConnection) getConnection()).getMetadataCache().evict("flow:" + flowName);
+            evictFlowDescription();
             throw new SQLException("Error calling flow " + flowName, e);
         }
         return false;
