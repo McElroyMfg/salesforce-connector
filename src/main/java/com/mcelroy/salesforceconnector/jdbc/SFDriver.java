@@ -62,7 +62,18 @@ public class SFDriver implements Driver {
                     clients.put(key, client);
                 }
             }
-            SFConnection connection = new SFConnection(client, environment);
+            long metadataCacheTtlSeconds;
+            int metadataCacheMaxEntries;
+            try {
+                metadataCacheTtlSeconds = Long.parseLong(properties.getProperty("metadataCacheTtlSeconds", "300"));
+                metadataCacheMaxEntries = Integer.parseInt(properties.getProperty("metadataCacheMaxEntries", "500"));
+                if (metadataCacheMaxEntries <= 0)
+                    throw new NumberFormatException();
+            } catch (NumberFormatException e) {
+                throw new SQLException("Invalid metadata cache properties: TTL must be an integer and max entries must be positive", e);
+            }
+            SFConnection connection = new SFConnection(client, environment,
+                    metadataCacheTtlSeconds, metadataCacheMaxEntries);
             return connection;
         }
         return null;
@@ -97,7 +108,7 @@ public class SFDriver implements Driver {
                 info.getProperty("privateKey"),
                 info.getProperty("password"));
 
-        DriverPropertyInfo[] p = new DriverPropertyInfo[5];
+        DriverPropertyInfo[] p = new DriverPropertyInfo[7];
         p[0] = new DriverPropertyInfo("clientId", info.getProperty("clientId"));
         p[0].required = true;
         p[0].description = "Salesforce Connected App consumer key";
@@ -117,6 +128,12 @@ public class SFDriver implements Driver {
         p[4] = new DriverPropertyInfo("password", null); // never echo secrets back to the caller
         p[4].required = false;
         p[4].description = "Accepted for compatibility; if privateKey is not set and this contains a PEM private key it is used as the JWT signing key";
+
+        p[5] = new DriverPropertyInfo("metadataCacheTtlSeconds", info.getProperty("metadataCacheTtlSeconds", "300"));
+        p[5].description = "Metadata cache lifetime in seconds; zero or negative disables caching";
+
+        p[6] = new DriverPropertyInfo("metadataCacheMaxEntries", info.getProperty("metadataCacheMaxEntries", "500"));
+        p[6].description = "Maximum metadata cache entries per connection (positive integer)";
 
         return p;
     }

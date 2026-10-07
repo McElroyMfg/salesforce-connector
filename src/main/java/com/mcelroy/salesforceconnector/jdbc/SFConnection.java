@@ -13,14 +13,31 @@ import java.util.concurrent.Executor;
 public class SFConnection implements Connection {
     SFClient client;
     String environment = null;
+    private final SFMetadataCache metadataCache;
 
     public SFConnection(SFClient client) {
-        this.client = client;
+        this(client, null);
     }
 
     public SFConnection(SFClient client, String environment) {
+        this(client, environment, 300, 500);
+    }
+
+    public SFConnection(SFClient client, String environment, long metadataCacheTtlSeconds,
+                        int metadataCacheMaxEntries) {
         this.client = client;
         this.environment = environment;
+        metadataCache = new SFMetadataCache(
+                java.util.concurrent.TimeUnit.SECONDS.toMillis(metadataCacheTtlSeconds),
+                metadataCacheMaxEntries);
+    }
+
+    SFMetadataCache getMetadataCache() {
+        return metadataCache;
+    }
+
+    public void clearMetadataCache() {
+        metadataCache.clear();
     }
 
     public SFClientConnection getClientConnection() {
@@ -69,7 +86,7 @@ public class SFConnection implements Connection {
 
     @Override
     public void close() throws SQLException {
-
+        clearMetadataCache();
     }
 
     @Override
@@ -79,7 +96,7 @@ public class SFConnection implements Connection {
 
     @Override
     public DatabaseMetaData getMetaData() throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        return new SFDatabaseMetaData(this);
     }
 
     @Override
@@ -94,6 +111,7 @@ public class SFConnection implements Connection {
 
     @Override
     public void setCatalog(String s) throws SQLException {
+        clearMetadataCache();
         this.environment = s;
     }
 
@@ -289,11 +307,13 @@ public class SFConnection implements Connection {
 
     @Override
     public <T> T unwrap(Class<T> aClass) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        if (isWrapperFor(aClass))
+            return aClass.cast(this);
+        throw new SQLException("Not a wrapper for " + aClass);
     }
 
     @Override
     public boolean isWrapperFor(Class<?> aClass) throws SQLException {
-        return false;
+        return aClass != null && aClass.isInstance(this);
     }
 }

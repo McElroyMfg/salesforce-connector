@@ -36,6 +36,30 @@ public class SFClientConnection {
         }
     }
 
+    public JSONObject describeGlobal() {
+        return get("");
+    }
+
+    public JSONObject describe(String sobject) {
+        return get(sobject + "/describe");
+    }
+
+    public JSONObject listFlows() {
+        try {
+            return connection.getJSON(connection.getServiceUrl() + "actions/custom/flow", null);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public JSONObject describeFlow(String flowName) {
+        try {
+            return connection.getJSON(connection.getServiceUrl() + "actions/custom/flow/" + flowName, null);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
 
     public void query(String query, QueryResultProcessor resultProcessor) {
         JSONObject r = query(query);
