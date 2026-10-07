@@ -51,10 +51,46 @@ The contents of `private_key.pem` (including the `-----BEGIN PRIVATE KEY-----` a
 `-----END PRIVATE KEY-----` lines) are what you pass as the `privateKey` property.
 
 #### JDBC
-Currently handles queries with optional column and table alias (no insert, update, or delete statements yet) 
+Handles queries with optional column and table alias and single-row `INSERT INTO ... VALUES ...` statements
 and stored procedures (Salesforce custom action flows.)
 
 Now supports row updates and inserts from the ResultSet.
+
+##### File uploads and generated keys
+Binary parameters (`setBytes`, `setBinaryStream`, `setBlob`, or binary `setObject`)
+are Base64-encoded for Salesforce fields whose describe type is `base64`.
+Binding binary data to any other field fails with `SQLException`.
+
+```java
+try (PreparedStatement ps = conn.prepareStatement(
+        "INSERT INTO ContentVersion " +
+        "(Title, PathOnClient, Description, ContentLocation, Temporary_File__c, VersionData) " +
+        "VALUES (?, ?, ?, 'S', true, ?)", Statement.RETURN_GENERATED_KEYS)) {
+    ps.setString(1, name);
+    ps.setString(2, name);
+    ps.setString(3, "Uploaded from distributor portal by " + userEmail);
+    ps.setBinaryStream(4, fileInputStream);
+    ps.executeUpdate(); // returns 1
+    try (ResultSet keys = ps.getGeneratedKeys()) {
+        if (keys.next()) {
+            id = keys.getString("Id");
+        }
+    }
+}
+```
+
+`getGeneratedKeys()` exposes the inserted Salesforce `Id` as a VARCHAR column;
+before an insert it returns an empty result set. INSERT values may be placeholders,
+quoted strings, numbers, booleans, or `null`. SQL UPDATE/DELETE statements are not
+supported; use the updatable ResultSet for record updates.
+
+The `convertHeic` connection property defaults to `true` (also configurable with
+`SFDataSource.setConvertHeic(boolean)`). HEIC/HEIF uploads are detected by content,
+converted to JPEG for Salesforce preview, and `.heic`/`.heif` extensions in
+`PathOnClient`, `Title`, and `Name` are changed to `.jpg`. Set `convertHeic=false`
+to upload the original bytes without renaming. This also applies to binary
+ResultSet inserts and updates. Streams are buffered in memory; supplied stream
+lengths are respected, and caller-owned InputStreams remain open.
 
 ##### Metadata and caching
 `Connection.getMetaData()` exposes queryable Salesforce objects as tables, fields as
