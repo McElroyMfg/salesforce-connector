@@ -9,6 +9,7 @@ import org.json.JSONObject;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.sql.CallableStatement;
 import java.sql.Connection;
@@ -17,6 +18,7 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Types;
+import java.util.Properties;
 
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
@@ -79,6 +81,22 @@ public class SFDatabaseMetaDataTest {
 
     private static void columnType(ResultSet result, String column, int type) throws SQLException {
         assertEquals(column, type, result.getMetaData().getColumnType(result.findColumn(column)));
+    }
+
+    @Test
+    public void driverVersionMatchesBuildVersion() throws Exception {
+        Properties properties = new Properties();
+        try (InputStream input = SFDatabaseMetaData.class.getResourceAsStream("driver-version.properties")) {
+            assertNotNull(input);
+            properties.load(input);
+        }
+        String version = properties.getProperty("version");
+        String[] components = version.split("\\.");
+
+        assertEquals(version, metadata.getDriverVersion());
+        assertEquals(Integer.parseInt(components[0]), metadata.getDriverMajorVersion());
+        assertEquals(Integer.parseInt(components[1].replaceFirst("[^0-9].*$", "")),
+                metadata.getDriverMinorVersion());
     }
 
     @Test

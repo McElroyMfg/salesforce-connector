@@ -5,6 +5,8 @@ package com.mcelroy.salesforceconnector.jdbc;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -12,11 +14,16 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Properties;
 import java.util.function.Supplier;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /** JDBC metadata backed by Salesforce object and Flow descriptions. */
 public class SFDatabaseMetaData implements DatabaseMetaData {
+    private static final String DRIVER_VERSION = loadDriverVersion();
+    private static final int DRIVER_MAJOR_VERSION = driverVersionComponent(0);
+    private static final int DRIVER_MINOR_VERSION = driverVersionComponent(1);
     private static final String TABLE_COLUMNS =
             "TABLE_CAT,TABLE_SCHEM,TABLE_NAME,TABLE_TYPE,REMARKS,TYPE_CAT,TYPE_SCHEM,TYPE_NAME,SELF_REFERENCING_COL_NAME,REF_GENERATION";
     private static final String COLUMN_COLUMNS =
@@ -26,6 +33,35 @@ public class SFDatabaseMetaData implements DatabaseMetaData {
     private static final String PROCEDURE_COLUMNS =
             "PROCEDURE_CAT,PROCEDURE_SCHEM,PROCEDURE_NAME,COLUMN_NAME,COLUMN_TYPE,DATA_TYPE,TYPE_NAME,PRECISION,LENGTH,SCALE,RADIX,NULLABLE,REMARKS,COLUMN_DEF,SQL_DATA_TYPE,SQL_DATETIME_SUB,CHAR_OCTET_LENGTH,ORDINAL_POSITION,IS_NULLABLE,SPECIFIC_NAME";
     private final SFConnection connection;
+
+    private static String loadDriverVersion() {
+        try (InputStream input = SFDatabaseMetaData.class.getResourceAsStream("driver-version.properties")) {
+            if (input == null) {
+                throw new IllegalStateException("Missing build-generated driver-version.properties");
+            }
+            Properties properties = new Properties();
+            properties.load(input);
+            String version = properties.getProperty("version");
+            if (version == null || version.trim().isEmpty()) {
+                throw new IllegalStateException("Missing driver version in driver-version.properties");
+            }
+            return version.trim();
+        } catch (IOException e) {
+            throw new ExceptionInInitializerError(e);
+        }
+    }
+
+    private static int driverVersionComponent(int component) {
+        String[] components = DRIVER_VERSION.split("\\.");
+        if (component >= components.length) {
+            return 0;
+        }
+        Matcher matcher = Pattern.compile("^(\\d+)").matcher(components[component]);
+        if (!matcher.find()) {
+            return 0;
+        }
+        return Integer.parseInt(matcher.group(1));
+    }
 
     public SFDatabaseMetaData(SFConnection connection) {
         this.connection = connection;
@@ -389,9 +425,9 @@ public class SFDatabaseMetaData implements DatabaseMetaData {
     @Override public String getDatabaseProductName() { return "Salesforce"; }
     @Override public String getDatabaseProductVersion() { return ""; }
     @Override public String getDriverName() { return "Salesforce Connector"; }
-    @Override public String getDriverVersion() { return "3.2"; }
-    @Override public int getDriverMajorVersion() { return 3; }
-    @Override public int getDriverMinorVersion() { return 2; }
+    @Override public String getDriverVersion() { return DRIVER_VERSION; }
+    @Override public int getDriverMajorVersion() { return DRIVER_MAJOR_VERSION; }
+    @Override public int getDriverMinorVersion() { return DRIVER_MINOR_VERSION; }
     @Override public boolean usesLocalFiles() { return false; }
     @Override public boolean usesLocalFilePerTable() { return false; }
     @Override public boolean supportsMixedCaseIdentifiers() { return false; }
