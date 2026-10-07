@@ -212,7 +212,7 @@ public class JdbcTest {
 
         // no properties: client credentials is the default flow
         DriverPropertyInfo[] info = driver.getPropertyInfo(url, new Properties());
-        assertEquals(5, info.length);
+        assertEquals(7, info.length);
         assertEquals("clientId", info[0].name);
         assertEquals(true, info[0].required);
         assertEquals("clientSecret", info[1].name);

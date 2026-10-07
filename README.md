@@ -56,6 +56,23 @@ and stored procedures (Salesforce custom action flows.)
 
 Now supports row updates and inserts from the ResultSet.
 
+##### Metadata and caching
+`Connection.getMetaData()` exposes queryable Salesforce objects as tables, fields as
+columns, and autolaunched Flows as stored procedures with input/output parameters.
+Flow calls may use explicit input names or JDBC `?` placeholders (input order comes
+from the Flow describe response).
+
+| Driver property | Default | Meaning |
+|---|---|---|
+| `metadataCacheTtlSeconds` | `300` | Metadata lifetime in seconds; `0` (or negative) disables caching |
+| `metadataCacheMaxEntries` | `500` | Maximum cached describe/list responses; must be positive |
+
+The expiring cache belongs to each JDBC connection, never to the shared REST client.
+`getMetaData()` returns a fresh metadata object backed by that cache. `close()` and
+`setCatalog(...)` clear it, and failed Flow calls evict the Flow describe entry.
+For a pooled connection, reset metadata manually with
+`connection.unwrap(SFConnection.class).clearMetadataCache()`.
+
 ##### Sandbox selection
 The catalog (sandbox) can be set in the JDBC URL by adding it after the host:
 
