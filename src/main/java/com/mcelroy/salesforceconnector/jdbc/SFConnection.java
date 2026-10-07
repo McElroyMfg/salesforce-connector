@@ -14,6 +14,15 @@ public class SFConnection implements Connection {
     SFClient client;
     String environment = null;
     private final SFMetadataCache metadataCache;
+    private boolean convertHeic = true;
+
+    public boolean getConvertHeic() {
+        return convertHeic;
+    }
+
+    public void setConvertHeic(boolean convertHeic) {
+        this.convertHeic = convertHeic;
+    }
 
     public SFConnection(SFClient client) {
         this(client, null);

@@ -18,6 +18,15 @@ public class SFDataSource implements DataSource {
     private String user;
     private String privateKey;
     private String password;
+    private boolean convertHeic = true;
+
+    public boolean getConvertHeic() {
+        return convertHeic;
+    }
+
+    public void setConvertHeic(boolean convertHeic) {
+        this.convertHeic = convertHeic;
+    }
 
     @Override
     public Connection getConnection() throws SQLException {
@@ -27,6 +36,7 @@ public class SFDataSource implements DataSource {
     @Override
     public Connection getConnection(String s, String s1) throws SQLException {
         Properties p = new Properties();
+        p.setProperty("convertHeic", Boolean.toString(convertHeic));
         if (clientId != null)
             p.setProperty("clientId", clientId);
         if (clientSecret != null)
@@ -48,12 +58,14 @@ public class SFDataSource implements DataSource {
 
     @Override
     public <T> T unwrap(Class<T> aClass) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        if (isWrapperFor(aClass))
+            return aClass.cast(this);
+        throw new SQLException("Not a wrapper for " + aClass);
     }
 
     @Override
     public boolean isWrapperFor(Class<?> aClass) throws SQLException {
-        return false;
+        return aClass != null && aClass.isInstance(this);
     }
 
     @Override

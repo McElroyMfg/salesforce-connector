@@ -92,6 +92,14 @@ to upload the original bytes without renaming. This also applies to binary
 ResultSet inserts and updates. Streams are buffered in memory; supplied stream
 lengths are respected, and caller-owned InputStreams remain open.
 
+HEIC decoding uses `com.aspose:openize-heic:26.5` from the official Aspose Maven
+repository and targets Java 8. Its Openize license is BSD-derived, not MIT:
+redistribution requires retaining its notices, and users/distributors are
+responsible for any required HEVC patent licenses and the license's indemnification
+terms. Review these obligations before deployment. The connector itself remains
+MIT-licensed. HEIF container rotation/mirroring is applied by the decoder;
+EXIF-only orientation is not currently applied.
+
 ##### Metadata and caching
 `Connection.getMetaData()` exposes queryable Salesforce objects as tables, fields as
 columns, and autolaunched Flows as stored procedures with input/output parameters.

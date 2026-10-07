@@ -548,7 +548,7 @@ public class SFDatabaseMetaData implements DatabaseMetaData {
     @Override public boolean supportsSavepoints() { return false; }
     @Override public boolean supportsNamedParameters() { return false; }
     @Override public boolean supportsMultipleOpenResults() { return false; }
-    @Override public boolean supportsGetGeneratedKeys() { return false; }
+    @Override public boolean supportsGetGeneratedKeys() { return true; }
     @Override public boolean supportsResultSetHoldability(int holdability) {
         return holdability == ResultSet.HOLD_CURSORS_OVER_COMMIT;
     }
@@ -563,7 +563,7 @@ public class SFDatabaseMetaData implements DatabaseMetaData {
     @Override public RowIdLifetime getRowIdLifetime() { return RowIdLifetime.ROWID_UNSUPPORTED; }
     @Override public boolean supportsStoredFunctionsUsingCallSyntax() { return false; }
     @Override public boolean autoCommitFailureClosesAllResultSets() { return false; }
-    @Override public boolean generatedKeyAlwaysReturned() { return false; }
+    @Override public boolean generatedKeyAlwaysReturned() { return true; }
     @Override public boolean isWrapperFor(Class<?> iface) { return iface != null && iface.isInstance(this); }
     @Override public <T> T unwrap(Class<T> iface) { return isWrapperFor(iface) ? iface.cast(this) : null; }
 }

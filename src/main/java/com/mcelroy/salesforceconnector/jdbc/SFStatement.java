@@ -11,6 +11,7 @@ import com.mcelroy.salesforceconnector.rest.SFClientConnection;
 
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -18,6 +19,8 @@ public class SFStatement implements Statement {
     private SFConnection sfConnection;
     private SFClientConnection apiConnection;
     private ResultSet resultSet;
+    protected String generatedId;
+    protected int updateCount = -1;
     private List<String> batch = new ArrayList<>();
 
     public SFStatement(SFConnection sfConnection, SFClientConnection apiConnection) {
@@ -29,7 +32,14 @@ public class SFStatement implements Statement {
         return apiConnection;
     }
 
+    protected void resetExecution() {
+        generatedId = null;
+        updateCount = -1;
+        resultSet = null;
+    }
+
     public ResultSet execute(SQL_Statement sql_statement, Map<Integer, String> placeholderValues) throws SQLException {
+        resetExecution();
         StringBuilder b = new StringBuilder();
         SQL_Visitor writer = new SOQL_Writer(b);
         if (placeholderValues != null)
@@ -53,6 +63,7 @@ public class SFStatement implements Statement {
 
     @Override
     public int executeUpdate(String s) throws SQLException {
+        resetExecution();
         String sl = s.trim().toLowerCase();
         if (sl.startsWith("catalog")) {
             String[] parts = sl.replaceAll(" +", " ").split(" ");
@@ -151,11 +162,12 @@ public class SFStatement implements Statement {
 
     @Override
     public int getUpdateCount() throws SQLException {
-        return -1;
+        return updateCount;
     }
 
     @Override
     public boolean getMoreResults() throws SQLException {
+        updateCount = -1;
         return false;
     }
 
@@ -225,7 +237,10 @@ public class SFStatement implements Statement {
 
     @Override
     public ResultSet getGeneratedKeys() throws SQLException {
-        return null;
+        List<Object[]> rows = generatedId == null ? Collections.emptyList()
+                : Collections.singletonList(new Object[]{generatedId});
+        return new SFListResultSet(Collections.singletonList("Id"), rows,
+                Collections.singletonList(Types.VARCHAR));
     }
 
     @Override
@@ -296,11 +311,13 @@ public class SFStatement implements Statement {
 
     @Override
     public <T> T unwrap(Class<T> aClass) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        if (isWrapperFor(aClass))
+            return aClass.cast(this);
+        throw new SQLException("Not a wrapper for " + aClass);
     }
 
     @Override
     public boolean isWrapperFor(Class<?> aClass) throws SQLException {
-        return false;
+        return aClass != null && aClass.isInstance(this);
     }
 }

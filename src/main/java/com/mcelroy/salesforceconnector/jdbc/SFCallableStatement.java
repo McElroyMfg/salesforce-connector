@@ -221,8 +221,35 @@ public class SFCallableStatement extends SFPreparedStatement implements Callable
     }
 
     @Override
+    public void setBytes(int i, byte[] bytes) throws SQLException {
+        params.put(i, bytes == null ? "null" : JSONObject.quote(Base64.getEncoder().encodeToString(bytes)));
+    }
+
+    @Override
+    public void setDate(int i, Date date) throws SQLException {
+        params.put(i, date == null ? "null" : JSONObject.quote(formatDate(date, "yyyy-MM-dd")));
+    }
+
+    @Override
+    public void setTime(int i, Time time) throws SQLException {
+        params.put(i, time == null ? "null" : JSONObject.quote(formatDate(time, "yyyy-MM-dd'T'HH:mm:ss.SSSZ")));
+    }
+
+    @Override
+    public void setTimestamp(int i, Timestamp timestamp) throws SQLException {
+        params.put(i, timestamp == null ? "null"
+                : JSONObject.quote(formatDate(timestamp, "yyyy-MM-dd'T'HH:mm:ss.SSSZ")));
+    }
+
+    @Override
     public void setObject(int i, Object o) throws SQLException {
-        if (Collection.class.isInstance(o)) {
+        if (o instanceof byte[]) {
+            setBytes(i, (byte[]) o);
+        } else if (o instanceof InputStream) {
+            setBinaryStream(i, (InputStream) o);
+        } else if (o instanceof Blob) {
+            setBlob(i, (Blob) o);
+        } else if (Collection.class.isInstance(o)) {
             Collection c = (Collection) o;
             JSONArray a = new JSONArray();
             for (Object x : c) {
