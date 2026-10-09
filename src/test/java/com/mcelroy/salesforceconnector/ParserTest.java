@@ -1,11 +1,14 @@
 package com.mcelroy.salesforceconnector;
 
+import com.mcelroy.salesforceconnector.parser.node.SQL_Call_Statement;
 import com.mcelroy.salesforceconnector.parser.node.SQL_Statement;
 import com.mcelroy.salesforceconnector.parser.visitor.SOQL_Writer;
 import com.mcelroy.salesforceconnector.parser.visitor.SQL_Writer;
 import org.junit.Test;
 
-import static org.junit.Assert.assertEquals;
+import java.util.Arrays;
+
+import static org.junit.Assert.*;
 
 public class ParserTest {
 
@@ -28,6 +31,12 @@ public class ParserTest {
         SQL_Statement s = SQL_Statement.parse("select cola from tab");
         assertEquals("SELECT cola FROM tab", sql(s));
         assertEquals("SELECT cola FROM tab", soql(s));
+    }
+
+    @Test
+    public void BackslashEscapedQuoteAndExponentTest() {
+        SQL_Statement s = SQL_Statement.parse("select cola from tab where cola = 'O\\'Brien' and colb > 1.5e-3 and colc < colb-2");
+        assertEquals("SELECT cola FROM tab WHERE cola = 'O\\'Brien' AND colb > 1.5e-3 AND colc < colb - 2", soql(s));
     }
 
     @Test
@@ -133,5 +142,33 @@ public class ParserTest {
         SQL_Statement s = SQL_Statement.parse("catalog staging");
         assertEquals("CATALOG staging", sql(s));
         assertEquals("CATALOG staging", soql(s));
+    }
+
+    @Test
+    public void CallTest() {
+        SQL_Call_Statement s = (SQL_Call_Statement) SQL_Statement.parse("{ CALL\tMyFlow(?, ?) };");
+        assertEquals("MyFlow", s.getFlowName());
+        assertTrue(s.isPositional());
+        assertTrue(s.getInputNames().isEmpty());
+
+        s = (SQL_Call_Statement) SQL_Statement.parse("call MyFlow(a, b)");
+        assertFalse(s.isPositional());
+        assertEquals(Arrays.asList("a", "b"), s.getInputNames());
+
+        s = (SQL_Call_Statement) SQL_Statement.parse("{call MyFlow}");
+        assertEquals("MyFlow", s.getFlowName());
+        assertTrue(s.getInputNames().isEmpty());
+    }
+
+    @Test
+    public void InvalidCallTest() {
+        for (String sql : new String[]{"call MyFlow(?, a)", "call MyFlow(a) extra", "{call MyFlow(a)",
+                "call MyFlow(a", "{select a from b}"}) {
+            try {
+                SQL_Statement.parse(sql);
+                fail("Expected parse failure: " + sql);
+            } catch (RuntimeException expected) {
+            }
+        }
     }
 }

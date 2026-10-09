@@ -74,6 +74,7 @@ public class SFDriver implements Driver {
             }
             SFConnection connection = new SFConnection(client, environment,
                     metadataCacheTtlSeconds, metadataCacheMaxEntries);
+            connection.setConvertHeic(Boolean.parseBoolean(properties.getProperty("convertHeic", "true")));
             return connection;
         }
         return null;
@@ -108,7 +109,7 @@ public class SFDriver implements Driver {
                 info.getProperty("privateKey"),
                 info.getProperty("password"));
 
-        DriverPropertyInfo[] p = new DriverPropertyInfo[7];
+        DriverPropertyInfo[] p = new DriverPropertyInfo[8];
         p[0] = new DriverPropertyInfo("clientId", info.getProperty("clientId"));
         p[0].required = true;
         p[0].description = "Salesforce Connected App consumer key";
@@ -134,6 +135,10 @@ public class SFDriver implements Driver {
 
         p[6] = new DriverPropertyInfo("metadataCacheMaxEntries", info.getProperty("metadataCacheMaxEntries", "500"));
         p[6].description = "Maximum metadata cache entries per connection (positive integer)";
+
+        p[7] = new DriverPropertyInfo("convertHeic", info.getProperty("convertHeic", "true"));
+        p[7].choices = new String[]{"true", "false"};
+        p[7].description = "Convert HEIC/HEIF binary uploads to JPEG";
 
         return p;
     }

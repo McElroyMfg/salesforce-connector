@@ -98,9 +98,10 @@ public class SFCallableStatementTest {
                 description(new String[]{"other", "record"}, new String[0]));
         SFCallableStatement statement = statement("call MyFlow", new JSONObject());
         statement.setObject("record", Collections.singletonMap("Name", "Acme"));
+        statement.setString(1, "first");
         statement.execute();
         assertEquals("Acme", launchedInputs().getJSONObject("record").getString("Name"));
-        assertEquals(java.util.Arrays.asList("other", "record"), statement.inputNames);
+        assertEquals("first", launchedInputs().getString("other"));
         verify(client, times(1)).describeFlow("MyFlow");
     }
 
@@ -222,7 +223,7 @@ public class SFCallableStatementTest {
     }
 
     @Test
-    public void unsuccessfulLaunchEvictsDescribeAndRefreshesInputNames() throws Exception {
+    public void unsuccessfulLaunchEvictsDescribeForNewStatements() throws Exception {
         SFCallableStatement statement = statement("{call MyFlow}", new JSONObject().put("answer", "ok"));
         when(client.describeFlow("MyFlow")).thenReturn(
                 description(new String[]{"old"}, new String[0]),
@@ -234,6 +235,10 @@ public class SFCallableStatementTest {
         expectSqlException(statement::execute);
         assertNull(statement.getString("answer"));
         statement.execute();
+        assertEquals("value", launchedInputs().getString("old"));
+        SFCallableStatement refreshed = new SFCallableStatement(connection, client, "{call MyFlow}");
+        refreshed.setString(1, "value");
+        refreshed.execute();
         assertEquals("value", launchedInputs().getString("new"));
         verify(client, times(2)).describeFlow("MyFlow");
     }
@@ -252,7 +257,7 @@ public class SFCallableStatementTest {
         } catch (SQLException e) {
             assertSame(cause, e.getCause());
         }
-        statement.execute();
+        new SFCallableStatement(connection, client, "{call MyFlow(?)}").execute();
         verify(client, times(2)).describeFlow("MyFlow");
     }
 
@@ -267,12 +272,12 @@ public class SFCallableStatementTest {
                 new JSONObject().put("isSuccess", false),
                 new JSONObject().put("isSuccess", true));
         expectSqlException(explicit::execute);
-        positional.execute();
+        new SFCallableStatement(connection, client, "{call MyFlow(?)}").execute();
         verify(client, times(2)).describeFlow("MyFlow");
     }
 
     @Test
-    public void namedBindingsSurviveUncachedDescribeReorderingAndMixWithIndexes() throws Exception {
+    public void inputNamesResolveOncePerStatementAndShareIndexesWithNamedBindings() throws Exception {
         SFConnection uncached = new SFConnection(null, null, 0, 500);
         when(client.describeFlow("MyFlow")).thenReturn(
                 description(new String[]{"a", "b"}, new String[0]),
@@ -286,9 +291,9 @@ public class SFCallableStatementTest {
         assertEquals("indexed", launchedInputs().getString("b"));
         statement.setString(1, "first");
         statement.execute();
-        assertEquals("named", launchedInputs().getString("a"));
-        assertEquals("first", launchedInputs().getString("b"));
-        verify(client, times(2)).describeFlow("MyFlow");
+        assertEquals("first", launchedInputs().getString("a"));
+        assertEquals("indexed", launchedInputs().getString("b"));
+        verify(client, times(1)).describeFlow("MyFlow");
         statement.clearParameters();
         statement.execute();
         assertEquals(0, launchedInputs().length());
@@ -416,7 +421,7 @@ public class SFCallableStatementTest {
         assertEquals("new", new JSONObject(body.getValue()).getJSONArray("inputs")
                 .getJSONObject(0).getString("inputB"));
         verify(clientB, times(1)).describeFlow("MyFlow");
-        verify(client, times(3)).describeFlow("MyFlow");
+        verify(client, times(2)).describeFlow("MyFlow");
     }
 
     @Test
@@ -444,7 +449,7 @@ public class SFCallableStatementTest {
         expectSqlException(old::execute);
         current.execute();
         verify(clientB, times(1)).describeFlow("MyFlow");
-        verify(client, times(2)).describeFlow("MyFlow");
+        verify(client, times(1)).describeFlow("MyFlow");
     }
 
     private interface SqlAction {

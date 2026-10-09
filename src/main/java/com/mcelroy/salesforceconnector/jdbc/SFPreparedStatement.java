@@ -3,26 +3,34 @@
 package com.mcelroy.salesforceconnector.jdbc;
 
 import com.mcelroy.salesforceconnector.parser.node.SQL_Statement;
+import com.mcelroy.salesforceconnector.parser.node.SQL_Select_Statement;
 import com.mcelroy.salesforceconnector.rest.SFClientConnection;
+import org.json.JSONObject;
 
 import java.io.InputStream;
 import java.io.Reader;
 import java.math.BigDecimal;
 import java.net.URL;
 import java.sql.*;
-import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
 
 public class SFPreparedStatement extends SFStatement implements PreparedStatement {
     private SQL_Statement sql_statement;
-    protected Map<Integer, String> params = new HashMap<>();
+    protected Map<Integer, Object> params = new HashMap<>();
+
+    protected void bind(int i, Object value) {
+        params.put(i, value == null ? JSONObject.NULL : value);
+    }
 
     public SFPreparedStatement(SFConnection sfConnection, SFClientConnection apiConnection, String sql) {
         super(sfConnection, apiConnection);
-        if (!sql.startsWith("call"))
-            this.sql_statement = SQL_Statement.parse(sql);
+        this.sql_statement = SQL_Statement.parse(sql);
+    }
+
+    protected SQL_Statement getSqlStatement() {
+        return sql_statement;
     }
 
     @Override
@@ -34,22 +42,22 @@ public class SFPreparedStatement extends SFStatement implements PreparedStatemen
     @Override
     public int executeUpdate() throws SQLException {
         execute();
-        return 0;
+        return getUpdateCount() < 0 ? 0 : getUpdateCount();
     }
 
     @Override
     public void setNull(int i, int i1) throws SQLException {
-        params.put(i, "null");
+        bind(i, null);
     }
 
     @Override
     public void setBoolean(int i, boolean b) throws SQLException {
-        params.put(i, b ? "true" : "false");
+        bind(i, b);
     }
 
     @Override
     public void setByte(int i, byte b) throws SQLException {
-        setString(i, "" + b);
+        bind(i, b);
     }
 
     @Override
@@ -64,7 +72,7 @@ public class SFPreparedStatement extends SFStatement implements PreparedStatemen
 
     @Override
     public void setLong(int i, long l) throws SQLException {
-        params.put(i, ((Long) l).toString());
+        bind(i, l);
     }
 
     @Override
@@ -74,54 +82,41 @@ public class SFPreparedStatement extends SFStatement implements PreparedStatemen
 
     @Override
     public void setDouble(int i, double v) throws SQLException {
-        params.put(i, ((Double) v).toString());
+        bind(i, v);
     }
 
     @Override
     public void setBigDecimal(int i, BigDecimal bigDecimal) throws SQLException {
-        if (bigDecimal == null)
-            setNull(i, 0);
-        params.put(i, bigDecimal.toString());
+        bind(i, bigDecimal);
     }
 
     @Override
     public void setString(int i, String s) throws SQLException {
-        s = s.replace("\\", "\\\\").replace("'", "\\'");
-        params.put(i, "'" + s + "'");
+        bind(i, s);
     }
 
     @Override
     public void setBytes(int i, byte[] bytes) throws SQLException {
-        setString(i, "" + bytes);
-    }
-
-    public static String formatDate(java.util.Date date, String fmt) {
-        SimpleDateFormat df = new SimpleDateFormat(fmt);
-        return df.format(date);
+        if (sql_statement instanceof SQL_Select_Statement)
+            // Preserve legacy SELECT literals; INSERT and Flow bindings use Base64.
+            setString(i, "" + bytes);
+        else
+            bind(i, bytes);
     }
 
     @Override
     public void setDate(int i, Date date) throws SQLException {
-        if (date == null)
-            setNull(i, 0);
-        else
-            params.put(i, formatDate(date, "yyyy-MM-dd"));
+        bind(i, date);
     }
 
     @Override
     public void setTime(int i, Time time) throws SQLException {
-        if (time == null)
-            setNull(i, 0);
-        else
-            params.put(i, formatDate(time, "yyyy-MM-dd'T'HH:mm:ss.SSSZ"));
+        bind(i, time);
     }
 
     @Override
     public void setTimestamp(int i, Timestamp timestamp) throws SQLException {
-        if (timestamp == null)
-            setNull(i, 0);
-        else
-            params.put(i, formatDate(timestamp, "yyyy-MM-dd'T'HH:mm:ss.SSSZ"));
+        bind(i, timestamp);
     }
 
     @Override
@@ -136,7 +131,7 @@ public class SFPreparedStatement extends SFStatement implements PreparedStatemen
 
     @Override
     public void setBinaryStream(int i, InputStream inputStream, int i1) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        setBytes(i, SFBinaryFields.read(inputStream, i1));
     }
 
     @Override
@@ -177,14 +172,22 @@ public class SFPreparedStatement extends SFStatement implements PreparedStatemen
             setInt(i, (Integer) o);
         else if (o instanceof Float)
             setFloat(i, (Float) o);
+        else if (o instanceof Byte)
+            setByte(i, (Byte) o);
+        else if (o instanceof byte[])
+            setBytes(i, (byte[]) o);
+        else if (o instanceof InputStream)
+            setBinaryStream(i, (InputStream) o);
+        else if (o instanceof Blob)
+            setBlob(i, (Blob) o);
         else
-            setString(i, o.toString());
+            bind(i, o);
     }
 
     @Override
     public boolean execute() throws SQLException {
         execute(sql_statement, params);
-        return true;
+        return getResultSet() != null;
     }
 
     @Override
@@ -204,7 +207,7 @@ public class SFPreparedStatement extends SFStatement implements PreparedStatemen
 
     @Override
     public void setBlob(int i, Blob blob) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        setBytes(i, SFBinaryFields.read(blob));
     }
 
     @Override
@@ -279,7 +282,7 @@ public class SFPreparedStatement extends SFStatement implements PreparedStatemen
 
     @Override
     public void setBlob(int i, InputStream inputStream, long l) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        setBinaryStream(i, inputStream, l);
     }
 
     @Override
@@ -304,7 +307,7 @@ public class SFPreparedStatement extends SFStatement implements PreparedStatemen
 
     @Override
     public void setBinaryStream(int i, InputStream inputStream, long l) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        setBytes(i, SFBinaryFields.read(inputStream, l));
     }
 
     @Override
@@ -319,7 +322,7 @@ public class SFPreparedStatement extends SFStatement implements PreparedStatemen
 
     @Override
     public void setBinaryStream(int i, InputStream inputStream) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        setBytes(i, SFBinaryFields.read(inputStream));
     }
 
     @Override
@@ -339,7 +342,7 @@ public class SFPreparedStatement extends SFStatement implements PreparedStatemen
 
     @Override
     public void setBlob(int i, InputStream inputStream) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        setBinaryStream(i, inputStream);
     }
 
     @Override

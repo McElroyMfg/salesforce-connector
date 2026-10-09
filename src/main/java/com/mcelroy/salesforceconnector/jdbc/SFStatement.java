@@ -2,15 +2,19 @@
 // SPDX-License-Identifier: MIT
 package com.mcelroy.salesforceconnector.jdbc;
 
+import com.mcelroy.salesforceconnector.parser.node.SQL_Call_Statement;
 import com.mcelroy.salesforceconnector.parser.node.SQL_Catalog_Statement;
+import com.mcelroy.salesforceconnector.parser.node.SQL_Insert_Statement;
 import com.mcelroy.salesforceconnector.parser.node.SQL_Statement;
 import com.mcelroy.salesforceconnector.parser.visitor.SOQL_Writer;
 import com.mcelroy.salesforceconnector.parser.visitor.SQL_Placeholder_Replacer;
 import com.mcelroy.salesforceconnector.parser.visitor.SQL_Visitor;
 import com.mcelroy.salesforceconnector.rest.SFClientConnection;
+import org.json.JSONObject;
 
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -18,6 +22,8 @@ public class SFStatement implements Statement {
     private SFConnection sfConnection;
     private SFClientConnection apiConnection;
     private ResultSet resultSet;
+    protected String generatedId;
+    protected int updateCount = -1;
     private List<String> batch = new ArrayList<>();
 
     public SFStatement(SFConnection sfConnection, SFClientConnection apiConnection) {
@@ -29,11 +35,35 @@ public class SFStatement implements Statement {
         return apiConnection;
     }
 
-    public ResultSet execute(SQL_Statement sql_statement, Map<Integer, String> placeholderValues) throws SQLException {
+    protected void resetExecution() {
+        generatedId = null;
+        updateCount = -1;
+        resultSet = null;
+    }
+
+    public ResultSet execute(SQL_Statement sql_statement, Map<Integer, Object> placeholderValues) throws SQLException {
+        resetExecution();
+        if (sql_statement instanceof SQL_Call_Statement)
+            throw new SQLFeatureNotSupportedException("Use prepareCall for CALL statements");
+        if (sql_statement instanceof SQL_Insert_Statement) {
+            SQL_Insert_Statement insert = (SQL_Insert_Statement) sql_statement;
+            Map<String, Object> row = SFBinaryFields.prepare(sfConnection, apiConnection,
+                    insert.getTable(), insert.bind(placeholderValues));
+            row.replaceAll((field, value) -> SFParameterEncoder.toJson(value));
+            try {
+                JSONObject response = apiConnection.insert(insert.getTable(), new JSONObject(row).toString());
+                generatedId = response.optString("id", null);
+                updateCount = 1;
+                return null;
+            } catch (RuntimeException e) {
+                throw new SQLException(e.getMessage(), e);
+            }
+        }
+
         StringBuilder b = new StringBuilder();
         SQL_Visitor writer = new SOQL_Writer(b);
         if (placeholderValues != null)
-            writer = new SQL_Placeholder_Replacer(writer, placeholderValues);
+            writer = new SQL_Placeholder_Replacer(writer, placeholderValues, SFParameterEncoder::toSoql);
         sql_statement.accept(writer);
 
         if(sql_statement instanceof SQL_Catalog_Statement){
@@ -53,6 +83,7 @@ public class SFStatement implements Statement {
 
     @Override
     public int executeUpdate(String s) throws SQLException {
+        resetExecution();
         String sl = s.trim().toLowerCase();
         if (sl.startsWith("catalog")) {
             String[] parts = sl.replaceAll(" +", " ").split(" ");
@@ -151,11 +182,12 @@ public class SFStatement implements Statement {
 
     @Override
     public int getUpdateCount() throws SQLException {
-        return -1;
+        return updateCount;
     }
 
     @Override
     public boolean getMoreResults() throws SQLException {
+        updateCount = -1;
         return false;
     }
 
@@ -225,7 +257,10 @@ public class SFStatement implements Statement {
 
     @Override
     public ResultSet getGeneratedKeys() throws SQLException {
-        return null;
+        List<Object[]> rows = generatedId == null ? Collections.emptyList()
+                : Collections.singletonList(new Object[]{generatedId});
+        return new SFListResultSet(Collections.singletonList("Id"), rows,
+                Collections.singletonList(Types.VARCHAR));
     }
 
     @Override
@@ -296,11 +331,13 @@ public class SFStatement implements Statement {
 
     @Override
     public <T> T unwrap(Class<T> aClass) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        if (isWrapperFor(aClass))
+            return aClass.cast(this);
+        throw new SQLException("Not a wrapper for " + aClass);
     }
 
     @Override
     public boolean isWrapperFor(Class<?> aClass) throws SQLException {
-        return false;
+        return aClass != null && aClass.isInstance(this);
     }
 }

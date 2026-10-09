@@ -13,7 +13,19 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     </properties>
 
+    <repositories>
+        <repository>
+            <id>aspose</id>
+            <url>https://releases.aspose.com/java/repo/</url>
+        </repository>
+    </repositories>
+
     <dependencies>
+        <dependency>
+            <groupId>com.aspose</groupId>
+            <artifactId>openize-heic</artifactId>
+            <version>26.5</version>
+        </dependency>
         <dependency>
             <groupId>org.json</groupId>
             <artifactId>json</artifactId>
@@ -76,10 +88,25 @@
                         <configuration>
                             <relocations>
                                 <relocation>
+                                    <pattern>openize</pattern>
+                                    <shadedPattern>com.mcelroy.salesforceconnector.shaded.openize</shadedPattern>
+                                </relocation>
+                                <relocation>
                                     <pattern>org.json</pattern>
                                     <shadedPattern>com.mcelroy.salesforceconnector.shaded.json</shadedPattern>
                                 </relocation>
                             </relocations>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                                    <resource>META-INF/LICENSE</resource>
+                                </transformer>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                                    <resource>META-INF/LICENSE.txt</resource>
+                                </transformer>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                                    <resource>META-INF/NOTICE</resource>
+                                </transformer>
+                            </transformers>
                             <filters>
                                 <filter>
                                     <artifact>*:*</artifact>

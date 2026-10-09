@@ -643,7 +643,7 @@ public class SFResultSet implements ResultSet {
 
     @Override
     public void updateNull(String s) throws SQLException {
-        updateRow.put(s, null);
+        updateRow.put(s, JSONObject.NULL);
     }
 
     @Override
@@ -683,8 +683,10 @@ public class SFResultSet implements ResultSet {
 
     @Override
     public void updateBigDecimal(String s, BigDecimal bigDecimal) throws SQLException {
-        if (bigDecimal == null)
+        if (bigDecimal == null) {
             updateNull(s);
+            return;
+        }
         updateRow.put(s, bigDecimal);
     }
 
@@ -695,7 +697,10 @@ public class SFResultSet implements ResultSet {
 
     @Override
     public void updateBytes(String s, byte[] bytes) throws SQLException {
-        updateRow.put(s, "" + bytes);
+        if (bytes == null)
+            updateNull(s);
+        else
+            updateRow.put(s, bytes);
     }
 
     @Override
@@ -703,7 +708,7 @@ public class SFResultSet implements ResultSet {
         if (date == null)
             updateNull(s);
         else
-            updateRow.put(s, SFPreparedStatement.formatDate(date, "yyyy-MM-dd"));
+            updateRow.put(s, SFParameterEncoder.toJson(date));
     }
 
     @Override
@@ -711,7 +716,7 @@ public class SFResultSet implements ResultSet {
         if (time == null)
             updateNull(s);
         else
-            updateRow.put(s, SFPreparedStatement.formatDate(time, "yyyy-MM-dd'T'HH:mm:ss.SSSZ"));
+            updateRow.put(s, SFParameterEncoder.toJson(time));
     }
 
     @Override
@@ -719,7 +724,7 @@ public class SFResultSet implements ResultSet {
         if (timestamp == null)
             updateNull(s);
         else
-            updateRow.put(s, SFPreparedStatement.formatDate(timestamp, "yyyy-MM-dd'T'HH:mm:ss.SSSZ"));
+            updateRow.put(s, SFParameterEncoder.toJson(timestamp));
     }
 
     @Override
@@ -729,7 +734,7 @@ public class SFResultSet implements ResultSet {
 
     @Override
     public void updateBinaryStream(String s, InputStream inputStream, int i) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        updateBinaryStream(s, inputStream, (long) i);
     }
 
     @Override
@@ -746,6 +751,12 @@ public class SFResultSet implements ResultSet {
     public void updateObject(String s, Object o) throws SQLException {
         if (o == null)
             updateNull(s);
+        else if (o instanceof byte[])
+            updateBytes(s, (byte[]) o);
+        else if (o instanceof InputStream)
+            updateBinaryStream(s, (InputStream) o);
+        else if (o instanceof Blob)
+            updateBlob(s, (Blob) o);
         else if (o instanceof String)
             updateString(s, (String) o);
         else if (o instanceof BigDecimal)
@@ -776,9 +787,16 @@ public class SFResultSet implements ResultSet {
 
     @Override
     public void insertRow() throws SQLException {
-        JSONObject jo = new JSONObject(updateRow);
-        statement.getApiConnection().insert(tableName, jo.toString());
-        updateRow.clear();
+        statement.generatedId = null;
+        try {
+            JSONObject jo = new JSONObject(SFBinaryFields.prepare((SFConnection) statement.getConnection(),
+                    statement.getApiConnection(), tableName, updateRow));
+            JSONObject response = statement.getApiConnection().insert(tableName, jo.toString());
+            statement.generatedId = response == null ? null : response.optString("id", null);
+            updateRow.clear();
+        } catch (RuntimeException e) {
+            throw new SQLException(e.getMessage(), e);
+        }
     }
 
     @Override
@@ -786,9 +804,14 @@ public class SFResultSet implements ResultSet {
         String id = getString("id");
         if (id == null)
             throw new SQLException("Can not update record. Selected columns do not include id field.");
-        JSONObject jo = new JSONObject(updateRow);
-        statement.getApiConnection().update(tableName + "/" + id, jo.toString());
-        updateRow.clear();
+        try {
+            JSONObject jo = new JSONObject(SFBinaryFields.prepare((SFConnection) statement.getConnection(),
+                    statement.getApiConnection(), tableName, updateRow));
+            statement.getApiConnection().update(tableName + "/" + id, jo.toString());
+            updateRow.clear();
+        } catch (RuntimeException e) {
+            throw new SQLException(e.getMessage(), e);
+        }
     }
 
     @Override
@@ -928,12 +951,12 @@ public class SFResultSet implements ResultSet {
 
     @Override
     public void updateBlob(int i, Blob blob) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        updateBlob(getColumnName(i), blob);
     }
 
     @Override
     public void updateBlob(String s, Blob blob) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        updateBytes(s, SFBinaryFields.read(blob));
     }
 
     @Override
@@ -1073,7 +1096,7 @@ public class SFResultSet implements ResultSet {
 
     @Override
     public void updateBinaryStream(int i, InputStream inputStream, long l) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        updateBinaryStream(getColumnName(i), inputStream, l);
     }
 
     @Override
@@ -1088,7 +1111,7 @@ public class SFResultSet implements ResultSet {
 
     @Override
     public void updateBinaryStream(String s, InputStream inputStream, long l) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        updateBytes(s, SFBinaryFields.read(inputStream, l));
     }
 
     @Override
@@ -1098,12 +1121,12 @@ public class SFResultSet implements ResultSet {
 
     @Override
     public void updateBlob(int i, InputStream inputStream, long l) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        updateBlob(getColumnName(i), inputStream, l);
     }
 
     @Override
     public void updateBlob(String s, InputStream inputStream, long l) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        updateBinaryStream(s, inputStream, l);
     }
 
     @Override
@@ -1143,7 +1166,7 @@ public class SFResultSet implements ResultSet {
 
     @Override
     public void updateBinaryStream(int i, InputStream inputStream) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        updateBinaryStream(getColumnName(i), inputStream);
     }
 
     @Override
@@ -1158,7 +1181,7 @@ public class SFResultSet implements ResultSet {
 
     @Override
     public void updateBinaryStream(String s, InputStream inputStream) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        updateBytes(s, SFBinaryFields.read(inputStream));
     }
 
     @Override
@@ -1168,12 +1191,12 @@ public class SFResultSet implements ResultSet {
 
     @Override
     public void updateBlob(int i, InputStream inputStream) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        updateBlob(getColumnName(i), inputStream);
     }
 
     @Override
     public void updateBlob(String s, InputStream inputStream) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        updateBinaryStream(s, inputStream);
     }
 
     @Override
@@ -1208,11 +1231,13 @@ public class SFResultSet implements ResultSet {
 
     @Override
     public <T> T unwrap(Class<T> aClass) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        if (isWrapperFor(aClass))
+            return aClass.cast(this);
+        throw new SQLException("Not a wrapper for " + (aClass == null ? "null" : aClass.getName()));
     }
 
     @Override
     public boolean isWrapperFor(Class<?> aClass) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        return aClass != null && aClass.isInstance(this);
     }
 }

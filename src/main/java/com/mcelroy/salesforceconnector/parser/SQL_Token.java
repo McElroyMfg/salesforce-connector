@@ -8,6 +8,7 @@ import com.mcelroy.salesforceconnector.parser.exception.MissingException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.regex.Pattern;
 
 public class SQL_Token {
     public interface TokenizerType {
@@ -15,7 +16,7 @@ public class SQL_Token {
 
     public enum TokenType implements TokenizerType {KEY_WORD, COMMA, GROUP_OPEN, GROUP_CLOSE, OPERATOR, QUOTE, WORD, PLACE_HOLDER}
 
-    public enum KeywordType implements TokenizerType {SELECT, INSERT, DELETE, UPDATE, CATALOG, FROM, WHERE, HAVING, GROUP, ORDER, BY, ASC, DESC, AS, LIMIT, OFFSET, NULL}
+    public enum KeywordType implements TokenizerType {SELECT, INSERT, DELETE, UPDATE, CATALOG, CALL, FROM, WHERE, HAVING, GROUP, ORDER, BY, ASC, DESC, AS, LIMIT, OFFSET, NULL}
 
     public enum OperatorType implements TokenizerType {
         AND, OR, LIKE, IN, IS, NOT, IS_NOT("IS NOT"),
@@ -37,6 +38,7 @@ public class SQL_Token {
         }
     }
 
+    private final static Pattern EXPONENT_MANTISSA = Pattern.compile("-?(?:[0-9]+(?:\\.[0-9]*)?|\\.[0-9]+)[eE]");
     private final static Map<String, KeywordType> keywordsMap = new HashMap<>();
     private final static Map<String, OperatorType> operatorMap = new HashMap<>();
 
@@ -174,7 +176,9 @@ public class SQL_Token {
             char nc = i + 1 < chars.length ? chars[i + 1] : ' ';
 
             if (inQuote) {
-                if (c == '\'') {
+                if (c == '\\') {
+                    i++; // backslash escape sequence so skip the escaped character
+                } else if (c == '\'') {
                     if (nc == '\'')
                         i++; // escaped quote character so skip the escape sequence
                     else
@@ -182,7 +186,8 @@ public class SQL_Token {
                 }
             } else if (c == '\'') {
                 inQuote = true;
-                tokenStart = i;
+                if (tokenStart < 0)
+                    tokenStart = i;
             } else if (Character.isWhitespace(c)) {
                 if (tokenStart >= 0) {
                     tokens.add(new SQL_Token(chars, tokenStart, i));
@@ -190,8 +195,11 @@ public class SQL_Token {
                 }
             } else if (c == '-' && tokenStart < 0 && Character.isDigit(nc)) {
                 tokenStart = i; // negative number
+            } else if ((c == '-' || c == '+') && tokenStart >= 0 && Character.isDigit(nc)
+                    && EXPONENT_MANTISSA.matcher(new String(chars, tokenStart, i - tokenStart)).matches()) {
+                // signed exponent so keep it in the number token
             } else if (c == '=' || c == '!' || c == '<' || c == '>' || c == '(' || c == ')' || c == ',' ||
-                    c == '*' || c == '/' || c == '-' || c == '+' || c == '?') {
+                    c == '*' || c == '/' || c == '-' || c == '+' || c == '?' || c == '{' || c == '}') {
                 if (c == '-' && tokenStart >= 0 && i - tokenStart == 4) {
                     // check if we have a date
                     StringBuilder b = new StringBuilder(27);
