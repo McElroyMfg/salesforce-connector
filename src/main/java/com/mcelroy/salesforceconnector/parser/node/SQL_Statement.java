@@ -26,7 +26,7 @@ public class SQL_Statement extends SQL_Node {
             } else if (t.is(CATALOG)) {
                 return new SQL_Catalog_Statement(tokenIterator);
             } else if (t.is(INSERT)) {
-                return new SQL_Insert_Statement(sql);
+                return new SQL_Insert_Statement(tokenIterator);
             } else {
                 throw new RuntimeException("Statement type " + t.getValue() + " is not supported");
             }

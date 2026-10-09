@@ -31,6 +31,12 @@ public class ParserTest {
     }
 
     @Test
+    public void BackslashEscapedQuoteAndExponentTest() {
+        SQL_Statement s = SQL_Statement.parse("select cola from tab where cola = 'O\\'Brien' and colb > 1.5e-3 and colc < colb-2");
+        assertEquals("SELECT cola FROM tab WHERE cola = 'O\\'Brien' AND colb > 1.5e-3 AND colc < colb - 2", soql(s));
+    }
+
+    @Test
     public void SimpleQueryColumnAliasTest() {
         SQL_Statement s = SQL_Statement.parse("select cola as ca from tab");
         assertEquals("SELECT cola AS ca FROM tab", sql(s));

@@ -68,7 +68,7 @@ try (PreparedStatement ps = conn.prepareStatement(
         "VALUES (?, ?, ?, 'S', true, ?)", Statement.RETURN_GENERATED_KEYS)) {
     ps.setString(1, name);
     ps.setString(2, name);
-    ps.setString(3, "Uploaded from distributor portal by " + userEmail);
+    ps.setString(3, "Uploaded by " + userEmail);
     ps.setBinaryStream(4, fileInputStream);
     ps.executeUpdate(); // returns 1
     try (ResultSet keys = ps.getGeneratedKeys()) {
