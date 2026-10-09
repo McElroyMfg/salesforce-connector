@@ -4,6 +4,7 @@ package com.mcelroy.salesforceconnector.parser.node;
 
 import com.mcelroy.salesforceconnector.parser.SQL_Token;
 
+import static com.mcelroy.salesforceconnector.parser.SQL_Token.KeywordType.CALL;
 import static com.mcelroy.salesforceconnector.parser.SQL_Token.KeywordType.CATALOG;
 import static com.mcelroy.salesforceconnector.parser.SQL_Token.KeywordType.INSERT;
 import static com.mcelroy.salesforceconnector.parser.SQL_Token.KeywordType.SELECT;
@@ -20,6 +21,10 @@ public class SQL_Statement extends SQL_Node {
             throw new RuntimeException("Empty SQL statement");
 
         SQL_Token t = tokenIterator.next();
+        // JDBC escape syntax: {call name(...)}
+        boolean escaped = "{".equals(t.getValue());
+        if (escaped)
+            t = tokenIterator.get(CALL);
         if (t.is(KEY_WORD)) {
             if (t.is(SELECT)) {
                 return new SQL_Select_Statement(tokenIterator);
@@ -27,6 +32,8 @@ public class SQL_Statement extends SQL_Node {
                 return new SQL_Catalog_Statement(tokenIterator);
             } else if (t.is(INSERT)) {
                 return new SQL_Insert_Statement(tokenIterator);
+            } else if (t.is(CALL)) {
+                return new SQL_Call_Statement(tokenIterator, escaped);
             } else {
                 throw new RuntimeException("Statement type " + t.getValue() + " is not supported");
             }

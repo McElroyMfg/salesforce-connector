@@ -16,7 +16,7 @@ public class SQL_Token {
 
     public enum TokenType implements TokenizerType {KEY_WORD, COMMA, GROUP_OPEN, GROUP_CLOSE, OPERATOR, QUOTE, WORD, PLACE_HOLDER}
 
-    public enum KeywordType implements TokenizerType {SELECT, INSERT, DELETE, UPDATE, CATALOG, FROM, WHERE, HAVING, GROUP, ORDER, BY, ASC, DESC, AS, LIMIT, OFFSET, NULL}
+    public enum KeywordType implements TokenizerType {SELECT, INSERT, DELETE, UPDATE, CATALOG, CALL, FROM, WHERE, HAVING, GROUP, ORDER, BY, ASC, DESC, AS, LIMIT, OFFSET, NULL}
 
     public enum OperatorType implements TokenizerType {
         AND, OR, LIKE, IN, IS, NOT, IS_NOT("IS NOT"),
@@ -199,7 +199,7 @@ public class SQL_Token {
                     && EXPONENT_MANTISSA.matcher(new String(chars, tokenStart, i - tokenStart)).matches()) {
                 // signed exponent so keep it in the number token
             } else if (c == '=' || c == '!' || c == '<' || c == '>' || c == '(' || c == ')' || c == ',' ||
-                    c == '*' || c == '/' || c == '-' || c == '+' || c == '?') {
+                    c == '*' || c == '/' || c == '-' || c == '+' || c == '?' || c == '{' || c == '}') {
                 if (c == '-' && tokenStart >= 0 && i - tokenStart == 4) {
                     // check if we have a date
                     StringBuilder b = new StringBuilder(27);

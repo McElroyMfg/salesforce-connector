@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 package com.mcelroy.salesforceconnector.jdbc;
 
+import com.mcelroy.salesforceconnector.parser.node.SQL_Call_Statement;
 import com.mcelroy.salesforceconnector.rest.SFClientConnection;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -20,9 +21,9 @@ import java.util.*;
 
 public class SFCallableStatement extends SFPreparedStatement implements CallableStatement {
     private final List<String> inputNames = new ArrayList<>();
-    private String flowName;
+    private final String flowName;
     private JSONObject outParams;
-    private boolean positionalInputs;
+    private final boolean positionalInputs;
     private boolean namesResolved;
     private boolean wasNull = true;
     private final String catalog;
@@ -49,34 +50,14 @@ public class SFCallableStatement extends SFPreparedStatement implements Callable
     }
 
     public SFCallableStatement(SFConnection sfConnection, SFClientConnection apiConnection, String sql) {
-        super(sfConnection, apiConnection, "call");
+        super(sfConnection, apiConnection, sql);
         catalog = sfConnection.environment;
-        sql = sql.trim();
-        int callIdx = sql.toLowerCase(Locale.ROOT).indexOf("call ");
-        if (callIdx < 0)
-            throw new RuntimeException("Missing call keyword");
-        callIdx += 5;
-
-        int openParenIdx = sql.indexOf("(", callIdx);
-        if (openParenIdx < 0) {
-            flowName = sql.substring(callIdx).trim();
-            if (flowName.endsWith("}"))
-                flowName = flowName.substring(0, flowName.length() - 1).trim();
-        } else {
-            flowName = sql.substring(callIdx, openParenIdx).trim();
-
-            int closeParenIdx = sql.indexOf(")", openParenIdx);
-            if (closeParenIdx < 0)
-                throw new RuntimeException("Missing closing ) for call parameter list");
-            String ps = sql.substring(openParenIdx + 1, closeParenIdx).trim();
-            if (!ps.isEmpty()) {
-                String[] paramNames = ps.split(",");
-                positionalInputs = Arrays.stream(paramNames).allMatch(p -> p.trim().equals("?"));
-                if (!positionalInputs)
-                    for (String name : paramNames)
-                        inputNames.add(name.trim());
-            }
-        }
+        if (!(getSqlStatement() instanceof SQL_Call_Statement))
+            throw new IllegalArgumentException("Expected a CALL statement: " + sql);
+        SQL_Call_Statement call = (SQL_Call_Statement) getSqlStatement();
+        flowName = call.getFlowName();
+        positionalInputs = call.isPositional();
+        inputNames.addAll(call.getInputNames());
     }
 
     private JSONObject describeFlow() throws SQLException {

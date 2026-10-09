@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 package com.mcelroy.salesforceconnector.jdbc;
 
+import com.mcelroy.salesforceconnector.parser.node.SQL_Call_Statement;
 import com.mcelroy.salesforceconnector.parser.node.SQL_Catalog_Statement;
 import com.mcelroy.salesforceconnector.parser.node.SQL_Insert_Statement;
 import com.mcelroy.salesforceconnector.parser.node.SQL_Statement;
@@ -42,6 +43,8 @@ public class SFStatement implements Statement {
 
     public ResultSet execute(SQL_Statement sql_statement, Map<Integer, Object> placeholderValues) throws SQLException {
         resetExecution();
+        if (sql_statement instanceof SQL_Call_Statement)
+            throw new SQLFeatureNotSupportedException("Use prepareCall for CALL statements");
         if (sql_statement instanceof SQL_Insert_Statement) {
             SQL_Insert_Statement insert = (SQL_Insert_Statement) sql_statement;
             Map<String, Object> row = SFBinaryFields.prepare(sfConnection, apiConnection,
