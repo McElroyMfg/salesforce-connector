@@ -5,6 +5,7 @@ package com.mcelroy.salesforceconnector.jdbc;
 import com.mcelroy.salesforceconnector.parser.node.SQL_Call_Statement;
 import com.mcelroy.salesforceconnector.parser.node.SQL_Catalog_Statement;
 import com.mcelroy.salesforceconnector.parser.node.SQL_Insert_Statement;
+import com.mcelroy.salesforceconnector.parser.node.SQL_Upsert_Statement;
 import com.mcelroy.salesforceconnector.parser.node.SQL_Statement;
 import com.mcelroy.salesforceconnector.parser.visitor.SOQL_Writer;
 import com.mcelroy.salesforceconnector.parser.visitor.SQL_Placeholder_Replacer;
@@ -16,6 +17,7 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 public class SFStatement implements Statement {
@@ -59,6 +61,24 @@ public class SFStatement implements Statement {
                 throw new SQLException(e.getMessage(), e);
             }
         }
+        if (sql_statement instanceof SQL_Upsert_Statement) {
+            SQL_Upsert_Statement upsert = (SQL_Upsert_Statement) sql_statement;
+            try {
+                Map<String, Object> row = upsert.bind(placeholderValues);
+                Object key = row.remove(upsert.getExternalIdField());
+                if (key == null || key == JSONObject.NULL || key.toString().isEmpty())
+                    throw new SQLException("UPSERT external ID must not be null or empty");
+                row = SFBinaryFields.prepare(sfConnection, apiConnection, upsert.getTable(), row);
+                row.replaceAll((field, value) -> SFParameterEncoder.toJson(value));
+                JSONObject response = apiConnection.upsert(upsert.getTable(), upsert.getExternalIdField(),
+                        key.toString(), new JSONObject(row).toString());
+                generatedId = response == null ? null : response.optString("id", null);
+                updateCount = 1;
+                return null;
+            } catch (RuntimeException e) {
+                throw new SQLException(e.getMessage(), e);
+            }
+        }
 
         StringBuilder b = new StringBuilder();
         SQL_Visitor writer = new SOQL_Writer(b);
@@ -84,7 +104,15 @@ public class SFStatement implements Statement {
     @Override
     public int executeUpdate(String s) throws SQLException {
         resetExecution();
-        String sl = s.trim().toLowerCase();
+        String sl = s.trim().toLowerCase(Locale.ROOT);
+        if (sl.startsWith("insert") || sl.startsWith("upsert")) {
+            try {
+                execute(SQL_Statement.parse(s), null);
+                return updateCount;
+            } catch (RuntimeException e) {
+                throw new SQLException(e.getMessage(), e);
+            }
+        }
         if (sl.startsWith("catalog")) {
             String[] parts = sl.replaceAll(" +", " ").split(" ");
             if (parts.length == 2 && !parts[1].trim().equals("null")) {
@@ -161,7 +189,7 @@ public class SFStatement implements Statement {
     @Override
     public boolean execute(String s) throws SQLException {
         if (s != null) {
-            String sl = s.trim().toLowerCase();
+            String sl = s.trim().toLowerCase(Locale.ROOT);
 
             if (sl.startsWith("select")) {
                 executeQuery(s);
@@ -266,19 +294,19 @@ public class SFStatement implements Statement {
     @Override
     public int executeUpdate(String s, int i) throws SQLException {
         execute(s);
-        return 0;
+        return Math.max(0, getUpdateCount());
     }
 
     @Override
     public int executeUpdate(String s, int[] ints) throws SQLException {
         execute(s);
-        return 0;
+        return Math.max(0, getUpdateCount());
     }
 
     @Override
     public int executeUpdate(String s, String[] strings) throws SQLException {
         execute(s);
-        return 0;
+        return Math.max(0, getUpdateCount());
     }
 
     @Override
