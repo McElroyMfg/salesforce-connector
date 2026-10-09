@@ -51,10 +51,31 @@ The contents of `private_key.pem` (including the `-----BEGIN PRIVATE KEY-----` a
 `-----END PRIVATE KEY-----` lines) are what you pass as the `privateKey` property.
 
 #### JDBC
-Handles queries with optional column and table alias and single-row `INSERT INTO ... VALUES ...` statements
+Handles queries with optional column and table alias and single-row `INSERT INTO ... VALUES ...` and `UPSERT` statements
 and stored procedures (Salesforce custom action flows.)
 
 Now supports row updates and inserts from the ResultSet.
+
+##### INSERT and UPSERT
+Both `Statement` and `PreparedStatement` support single-row writes:
+
+```sql
+INSERT INTO Account (Name, Phone) VALUES ('Acme', '555-0100');
+UPSERT INTO Account (External_Id__c, Name, Phone) VALUES (?, ?, ?) ON External_Id__c;
+```
+
+Values may be positional `?` parameters (with `PreparedStatement`), quoted strings,
+numbers, booleans, or `null`. Column names must be unique and match the number of
+values. UPSERT requires `ON <field>` naming one of the listed columns
+(case-insensitive); use a Salesforce external ID field or `Id`. The key must not
+be null or empty. The driver URL-encodes the key and excludes it from the JSON body.
+
+UPSERT uses the Salesforce REST upsert endpoint to create or update one record.
+`executeUpdate()` returns `1` for either outcome, and `execute()` returns `false`
+with an update count of `1`. `getGeneratedKeys()` exposes the Salesforce `Id` when
+returned by the API; an update without an ID returns an empty keys result set.
+Multiple matches (HTTP 300) and invalid external ID fields (HTTP 404) raise
+`SQLException`. Composite/bulk upsert is not supported.
 
 ##### File uploads and generated keys
 Binary parameters (`setBytes`, `setBinaryStream`, `setBlob`, or binary `setObject`)

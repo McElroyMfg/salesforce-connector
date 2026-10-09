@@ -25,6 +25,7 @@ public class SFRestConnection {
     private static class SFRestResponse {
         public boolean authException = false;
         public boolean isError = false;
+        int status;
         String response;
     }
 
@@ -166,17 +167,17 @@ public class SFRestConnection {
 
 
     public JSONObject postJSON(String urlString, String data) throws Exception {
-        return sendJSON("POST", urlString, data);
+        return sendJSON("POST", urlString, data, false);
     }
 
 
     public JSONObject patchJSON(String urlString, String data) throws Exception {
         // Fix for Java not supporting PATCH
-        return sendJSON("POST", urlString + "?_HttpMethod=PATCH", data);
+        return sendJSON("POST", urlString + "?_HttpMethod=PATCH", data, true);
     }
 
 
-    private JSONObject sendJSON(String method, String urlString, String data) throws Exception {
+    private JSONObject sendJSON(String method, String urlString, String data, boolean patch) throws Exception {
         SFRestResponse restResponse;
         int tries = 0;
         do {
@@ -186,8 +187,14 @@ public class SFRestConnection {
             else if (restResponse.isError)
                 throw new Exception(restResponse.response);
             else {
-                if (restResponse.response.startsWith("{"))
-                    return new JSONObject(restResponse.response);
+                if (patch && restResponse.response.trim().isEmpty())
+                    return new JSONObject().put("created", restResponse.status == 201);
+                if (restResponse.response.startsWith("{")) {
+                    JSONObject result = new JSONObject(restResponse.response);
+                    if (patch && !result.has("created"))
+                        result.put("created", restResponse.status == 201);
+                    return result;
+                }
                 else if (restResponse.response.startsWith("[")) {
                     JSONArray a = new JSONArray(restResponse.response);
                     return a.getJSONObject(0);
@@ -269,6 +276,7 @@ public class SFRestConnection {
             }
 
             int status = conn.getResponseCode();
+            restResponse.status = status;
 
             if (status == 401) {
                 restResponse.authException = true;
@@ -286,8 +294,13 @@ public class SFRestConnection {
             }
 
             restResponse.response = sb.toString();
-            if (status >= 400)
+            if (status == 300) {
                 restResponse.isError = true;
+                restResponse.response = "HTTP 300: Multiple records matched the external ID. " + restResponse.response;
+            } else if (status >= 400) {
+                restResponse.isError = true;
+                restResponse.response = "HTTP " + status + ": " + restResponse.response;
+            }
         } catch (UnknownHostException e) {
             restResponse.isError = true;
             restResponse.response = "Unknown host: " + e.getMessage();
