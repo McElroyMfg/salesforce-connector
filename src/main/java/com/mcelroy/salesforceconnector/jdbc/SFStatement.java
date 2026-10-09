@@ -3,11 +3,13 @@
 package com.mcelroy.salesforceconnector.jdbc;
 
 import com.mcelroy.salesforceconnector.parser.node.SQL_Catalog_Statement;
+import com.mcelroy.salesforceconnector.parser.node.SQL_Insert_Statement;
 import com.mcelroy.salesforceconnector.parser.node.SQL_Statement;
 import com.mcelroy.salesforceconnector.parser.visitor.SOQL_Writer;
 import com.mcelroy.salesforceconnector.parser.visitor.SQL_Placeholder_Replacer;
 import com.mcelroy.salesforceconnector.parser.visitor.SQL_Visitor;
 import com.mcelroy.salesforceconnector.rest.SFClientConnection;
+import org.json.JSONObject;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -38,12 +40,27 @@ public class SFStatement implements Statement {
         resultSet = null;
     }
 
-    public ResultSet execute(SQL_Statement sql_statement, Map<Integer, String> placeholderValues) throws SQLException {
+    public ResultSet execute(SQL_Statement sql_statement, Map<Integer, Object> placeholderValues) throws SQLException {
         resetExecution();
+        if (sql_statement instanceof SQL_Insert_Statement) {
+            SQL_Insert_Statement insert = (SQL_Insert_Statement) sql_statement;
+            Map<String, Object> row = SFBinaryFields.prepare(sfConnection, apiConnection,
+                    insert.getTable(), insert.bind(placeholderValues));
+            row.replaceAll((field, value) -> SFParameterEncoder.toJson(value));
+            try {
+                JSONObject response = apiConnection.insert(insert.getTable(), new JSONObject(row).toString());
+                generatedId = response.optString("id", null);
+                updateCount = 1;
+                return null;
+            } catch (RuntimeException e) {
+                throw new SQLException(e.getMessage(), e);
+            }
+        }
+
         StringBuilder b = new StringBuilder();
         SQL_Visitor writer = new SOQL_Writer(b);
         if (placeholderValues != null)
-            writer = new SQL_Placeholder_Replacer(writer, placeholderValues);
+            writer = new SQL_Placeholder_Replacer(writer, placeholderValues, SFParameterEncoder::toSoql);
         sql_statement.accept(writer);
 
         if(sql_statement instanceof SQL_Catalog_Statement){

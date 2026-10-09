@@ -5,7 +5,6 @@ package com.mcelroy.salesforceconnector.jdbc;
 import com.mcelroy.salesforceconnector.rest.SFClientConnection;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.json.JSONString;
 
 import java.io.InputStream;
 import java.io.Reader;
@@ -20,55 +19,38 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 public class SFCallableStatement extends SFPreparedStatement implements CallableStatement {
-    List<String> inputNames = new ArrayList<>();
-    String flowName;
-    JSONObject outParams;
+    private final List<String> inputNames = new ArrayList<>();
+    private String flowName;
+    private JSONObject outParams;
     private boolean positionalInputs;
-    private boolean inferredInputs;
+    private boolean namesResolved;
     private boolean wasNull = true;
-    private final Map<String, String> namedParams = new LinkedHashMap<>();
-    private final Map<String, Long> namedBindingOrder = new HashMap<>();
-    private final Map<Integer, Long> positionalBindingOrder = new HashMap<>();
-    private long bindingOrder;
     private final String catalog;
 
-    private interface ParameterBinding {
-        void bind() throws SQLException;
-    }
-
-    private void bindNamed(String name, ParameterBinding binding) throws SQLException {
+    private int indexOf(String name) throws SQLException {
         if (name == null)
             throw new SQLException("Property name can not be null");
-        Map<Integer, String> positionalParams = params;
-        // Reuse the indexed setter's encoding without changing positional bindings.
-        params = new HashMap<>();
-        try {
-            binding.bind();
-            namedParams.put(name, params.get(1));
-            namedBindingOrder.put(name, ++bindingOrder);
-        } finally {
-            params = positionalParams;
+        resolveInputNames();
+        int index = inputNames.indexOf(name);
+        if (index < 0) {
+            inputNames.add(name);
+            index = inputNames.size() - 1;
         }
+        return index + 1;
     }
 
-    @Override
-    public void clearParameters() throws SQLException {
-        super.clearParameters();
-        namedParams.clear();
-        namedBindingOrder.clear();
-        positionalBindingOrder.clear();
+    // Resolved once so indexes already bound by name stay stable for this statement.
+    private void resolveInputNames() throws SQLException {
+        if (namesResolved)
+            return;
+        if (positionalInputs || inputNames.isEmpty())
+            inputNames.addAll(parameterNames("inputs"));
+        namesResolved = true;
     }
 
     public SFCallableStatement(SFConnection sfConnection, SFClientConnection apiConnection, String sql) {
         super(sfConnection, apiConnection, "call");
         catalog = sfConnection.environment;
-        params = new HashMap<Integer, String>() {
-            @Override
-            public String put(Integer index, String value) {
-                positionalBindingOrder.put(index, ++bindingOrder);
-                return super.put(index, value);
-            }
-        };
         sql = sql.trim();
         int callIdx = sql.toLowerCase(Locale.ROOT).indexOf("call ");
         if (callIdx < 0)
@@ -153,36 +135,11 @@ public class SFCallableStatement extends SFPreparedStatement implements Callable
 
     private String parseBody() throws SQLException {
         try {
-            JSONObject body = new JSONObject();
-            JSONArray inputs = new JSONArray();
-            body.put("inputs", inputs);
             JSONObject values = new JSONObject();
-            inputs.put(values);
-            for (int i = 0; i < inputNames.size(); i++) {
-                String key = inputNames.get(i);
-                String value = params.get(i + 1);
-                if (value != null) {
-                    JSONString js = new JSONString() {
-                        @Override
-                        public String toJSONString() {
-                            return value;
-                        }
-                    };
-                    values.put(key, js);
-                }
-            }
-            for (Map.Entry<String, String> entry : namedParams.entrySet()) {
-                int index = inputNames.indexOf(entry.getKey()) + 1;
-                if (positionalBindingOrder.getOrDefault(index, 0L)
-                        > namedBindingOrder.get(entry.getKey()))
-                    continue;
-                String value = entry.getValue();
-                if (value != null)
-                    values.put(entry.getKey(), (JSONString) () -> value);
-            }
-
-            return body.toString();
-        } catch (Exception e) {
+            for (Map.Entry<Integer, Object> entry : params.entrySet())
+                values.put(inputNames.get(entry.getKey() - 1), SFParameterEncoder.toJson(entry.getValue()));
+            return new JSONObject().put("inputs", new JSONArray().put(values)).toString();
+        } catch (RuntimeException e) {
             throw new SQLException(e);
         }
     }
@@ -191,11 +148,7 @@ public class SFCallableStatement extends SFPreparedStatement implements Callable
     public boolean execute() throws SQLException {
         outParams = null;
         wasNull = true;
-        if (positionalInputs || inferredInputs || inputNames.isEmpty()) {
-            inferredInputs = true;
-            inputNames.clear();
-            inputNames.addAll(parameterNames("inputs"));
-        }
+        resolveInputNames();
         for (Integer index : params.keySet())
             if (index < 1 || index > inputNames.size())
                 throw new SQLException("Invalid input parameter index: " + index);
@@ -213,56 +166,6 @@ public class SFCallableStatement extends SFPreparedStatement implements Callable
             throw new SQLException("Error calling flow " + flowName, e);
         }
         return false;
-    }
-
-    @Override
-    public void setString(int i, String s) throws SQLException {
-        params.put(i, JSONObject.quote(s));
-    }
-
-    @Override
-    public void setBytes(int i, byte[] bytes) throws SQLException {
-        params.put(i, bytes == null ? "null" : JSONObject.quote(Base64.getEncoder().encodeToString(bytes)));
-    }
-
-    @Override
-    public void setDate(int i, Date date) throws SQLException {
-        params.put(i, date == null ? "null" : JSONObject.quote(formatDate(date, "yyyy-MM-dd")));
-    }
-
-    @Override
-    public void setTime(int i, Time time) throws SQLException {
-        params.put(i, time == null ? "null" : JSONObject.quote(formatDate(time, "yyyy-MM-dd'T'HH:mm:ss.SSSZ")));
-    }
-
-    @Override
-    public void setTimestamp(int i, Timestamp timestamp) throws SQLException {
-        params.put(i, timestamp == null ? "null"
-                : JSONObject.quote(formatDate(timestamp, "yyyy-MM-dd'T'HH:mm:ss.SSSZ")));
-    }
-
-    @Override
-    public void setObject(int i, Object o) throws SQLException {
-        if (o instanceof byte[]) {
-            setBytes(i, (byte[]) o);
-        } else if (o instanceof InputStream) {
-            setBinaryStream(i, (InputStream) o);
-        } else if (o instanceof Blob) {
-            setBlob(i, (Blob) o);
-        } else if (Collection.class.isInstance(o)) {
-            Collection c = (Collection) o;
-            JSONArray a = new JSONArray();
-            for (Object x : c) {
-                a.put(x);
-            }
-            params.put(i, a.toString());
-        } else if (o instanceof Map) {
-            JSONObject obj = new JSONObject((Map) o);
-            params.put(i, obj.toString());
-        } else {
-            JSONObject obj = new JSONObject(o);
-            params.put(i, obj.toString());
-        }
     }
 
     @Override
@@ -423,127 +326,127 @@ public class SFCallableStatement extends SFPreparedStatement implements Callable
 
     @Override
     public void setURL(String s, URL url) throws SQLException {
-        bindNamed(s, () -> setURL(1, url));
+        setURL(indexOf(s), url);
     }
 
     @Override
     public void setNull(String s, int i) throws SQLException {
-        bindNamed(s, () -> setNull(1, i));
+        setNull(indexOf(s), i);
     }
 
     @Override
     public void setBoolean(String s, boolean b) throws SQLException {
-        bindNamed(s, () -> setBoolean(1, b));
+        setBoolean(indexOf(s), b);
     }
 
     @Override
     public void setByte(String s, byte b) throws SQLException {
-        bindNamed(s, () -> setByte(1, b));
+        setByte(indexOf(s), b);
     }
 
     @Override
     public void setShort(String s, short i) throws SQLException {
-        bindNamed(s, () -> setShort(1, i));
+        setShort(indexOf(s), i);
     }
 
     @Override
     public void setInt(String s, int i) throws SQLException {
-        bindNamed(s, () -> setInt(1, i));
+        setInt(indexOf(s), i);
     }
 
     @Override
     public void setLong(String s, long l) throws SQLException {
-        bindNamed(s, () -> setLong(1, l));
+        setLong(indexOf(s), l);
     }
 
     @Override
     public void setFloat(String s, float v) throws SQLException {
-        bindNamed(s, () -> setFloat(1, v));
+        setFloat(indexOf(s), v);
     }
 
     @Override
     public void setDouble(String s, double v) throws SQLException {
-        bindNamed(s, () -> setDouble(1, v));
+        setDouble(indexOf(s), v);
     }
 
     @Override
     public void setBigDecimal(String s, BigDecimal bigDecimal) throws SQLException {
-        bindNamed(s, () -> setBigDecimal(1, bigDecimal));
+        setBigDecimal(indexOf(s), bigDecimal);
     }
 
     @Override
     public void setString(String s, String s1) throws SQLException {
-        bindNamed(s, () -> setString(1, s1));
+        setString(indexOf(s), s1);
     }
 
     @Override
     public void setBytes(String s, byte[] bytes) throws SQLException {
-        bindNamed(s, () -> setBytes(1, bytes));
+        setBytes(indexOf(s), bytes);
     }
 
     @Override
     public void setDate(String s, Date date) throws SQLException {
-        bindNamed(s, () -> setDate(1, date));
+        setDate(indexOf(s), date);
     }
 
     @Override
     public void setTime(String s, Time time) throws SQLException {
-        bindNamed(s, () -> setTime(1, time));
+        setTime(indexOf(s), time);
     }
 
     @Override
     public void setTimestamp(String s, Timestamp timestamp) throws SQLException {
-        bindNamed(s, () -> setTimestamp(1, timestamp));
+        setTimestamp(indexOf(s), timestamp);
     }
 
     @Override
     public void setAsciiStream(String s, InputStream inputStream, int i) throws SQLException {
-        bindNamed(s, () -> setAsciiStream(1, inputStream, i));
+        setAsciiStream(indexOf(s), inputStream, i);
     }
 
     @Override
     public void setBinaryStream(String s, InputStream inputStream, int i) throws SQLException {
-        bindNamed(s, () -> setBinaryStream(1, inputStream, i));
+        setBinaryStream(indexOf(s), inputStream, i);
     }
 
     @Override
     public void setObject(String s, Object o, int i, int i1) throws SQLException {
-        bindNamed(s, () -> setObject(1, o, i, i1));
+        setObject(indexOf(s), o, i, i1);
     }
 
     @Override
     public void setObject(String s, Object o, int i) throws SQLException {
-        bindNamed(s, () -> setObject(1, o, i));
+        setObject(indexOf(s), o, i);
     }
 
     @Override
     public void setObject(String s, Object o) throws SQLException {
-        bindNamed(s, () -> setObject(1, o));
+        setObject(indexOf(s), o);
     }
 
     @Override
     public void setCharacterStream(String s, Reader reader, int i) throws SQLException {
-        bindNamed(s, () -> setCharacterStream(1, reader, i));
+        setCharacterStream(indexOf(s), reader, i);
     }
 
     @Override
     public void setDate(String s, Date date, Calendar calendar) throws SQLException {
-        bindNamed(s, () -> setDate(1, date, calendar));
+        setDate(indexOf(s), date, calendar);
     }
 
     @Override
     public void setTime(String s, Time time, Calendar calendar) throws SQLException {
-        bindNamed(s, () -> setTime(1, time, calendar));
+        setTime(indexOf(s), time, calendar);
     }
 
     @Override
     public void setTimestamp(String s, Timestamp timestamp, Calendar calendar) throws SQLException {
-        bindNamed(s, () -> setTimestamp(1, timestamp, calendar));
+        setTimestamp(indexOf(s), timestamp, calendar);
     }
 
     @Override
     public void setNull(String s, int i, String s1) throws SQLException {
-        bindNamed(s, () -> setNull(1, i, s1));
+        setNull(indexOf(s), i, s1);
     }
 
     @Override
@@ -744,37 +647,37 @@ public class SFCallableStatement extends SFPreparedStatement implements Callable
 
     @Override
     public void setRowId(String s, RowId rowId) throws SQLException {
-        bindNamed(s, () -> setRowId(1, rowId));
+        setRowId(indexOf(s), rowId);
     }
 
     @Override
     public void setNString(String s, String s1) throws SQLException {
-        bindNamed(s, () -> setNString(1, s1));
+        setNString(indexOf(s), s1);
     }
 
     @Override
     public void setNCharacterStream(String s, Reader reader, long l) throws SQLException {
-        bindNamed(s, () -> setNCharacterStream(1, reader, l));
+        setNCharacterStream(indexOf(s), reader, l);
     }
 
     @Override
     public void setNClob(String s, NClob nClob) throws SQLException {
-        bindNamed(s, () -> setNClob(1, nClob));
+        setNClob(indexOf(s), nClob);
     }
 
     @Override
     public void setClob(String s, Reader reader, long l) throws SQLException {
-        bindNamed(s, () -> setClob(1, reader, l));
+        setClob(indexOf(s), reader, l);
     }
 
     @Override
     public void setBlob(String s, InputStream inputStream, long l) throws SQLException {
-        bindNamed(s, () -> setBlob(1, inputStream, l));
+        setBlob(indexOf(s), inputStream, l);
     }
 
     @Override
     public void setNClob(String s, Reader reader, long l) throws SQLException {
-        bindNamed(s, () -> setNClob(1, reader, l));
+        setNClob(indexOf(s), reader, l);
     }
 
     @Override
@@ -789,7 +692,7 @@ public class SFCallableStatement extends SFPreparedStatement implements Callable
 
     @Override
     public void setSQLXML(String s, SQLXML sqlxml) throws SQLException {
-        bindNamed(s, () -> setSQLXML(1, sqlxml));
+        setSQLXML(indexOf(s), sqlxml);
     }
 
     @Override
@@ -835,62 +738,62 @@ public class SFCallableStatement extends SFPreparedStatement implements Callable
 
     @Override
     public void setBlob(String s, Blob blob) throws SQLException {
-        bindNamed(s, () -> setBlob(1, blob));
+        setBlob(indexOf(s), blob);
     }
 
     @Override
     public void setClob(String s, Clob clob) throws SQLException {
-        bindNamed(s, () -> setClob(1, clob));
+        setClob(indexOf(s), clob);
     }
 
     @Override
     public void setAsciiStream(String s, InputStream inputStream, long l) throws SQLException {
-        bindNamed(s, () -> setAsciiStream(1, inputStream, l));
+        setAsciiStream(indexOf(s), inputStream, l);
     }
 
     @Override
     public void setBinaryStream(String s, InputStream inputStream, long l) throws SQLException {
-        bindNamed(s, () -> setBinaryStream(1, inputStream, l));
+        setBinaryStream(indexOf(s), inputStream, l);
     }
 
     @Override
     public void setCharacterStream(String s, Reader reader, long l) throws SQLException {
-        bindNamed(s, () -> setCharacterStream(1, reader, l));
+        setCharacterStream(indexOf(s), reader, l);
     }
 
     @Override
     public void setAsciiStream(String s, InputStream inputStream) throws SQLException {
-        bindNamed(s, () -> setAsciiStream(1, inputStream));
+        setAsciiStream(indexOf(s), inputStream);
     }
 
     @Override
     public void setBinaryStream(String s, InputStream inputStream) throws SQLException {
-        bindNamed(s, () -> setBinaryStream(1, inputStream));
+        setBinaryStream(indexOf(s), inputStream);
     }
 
     @Override
     public void setCharacterStream(String s, Reader reader) throws SQLException {
-        bindNamed(s, () -> setCharacterStream(1, reader));
+        setCharacterStream(indexOf(s), reader);
     }
 
     @Override
     public void setNCharacterStream(String s, Reader reader) throws SQLException {
-        bindNamed(s, () -> setNCharacterStream(1, reader));
+        setNCharacterStream(indexOf(s), reader);
     }
 
     @Override
     public void setClob(String s, Reader reader) throws SQLException {
-        bindNamed(s, () -> setClob(1, reader));
+        setClob(indexOf(s), reader);
     }
 
     @Override
     public void setBlob(String s, InputStream inputStream) throws SQLException {
-        bindNamed(s, () -> setBlob(1, inputStream));
+        setBlob(indexOf(s), inputStream);
     }
 
     @Override
     public void setNClob(String s, Reader reader) throws SQLException {
-        bindNamed(s, () -> setNClob(1, reader));
+        setNClob(indexOf(s), reader);
     }
 
     @Override

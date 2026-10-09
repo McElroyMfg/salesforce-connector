@@ -708,7 +708,7 @@ public class SFResultSet implements ResultSet {
         if (date == null)
             updateNull(s);
         else
-            updateRow.put(s, SFPreparedStatement.formatDate(date, "yyyy-MM-dd"));
+            updateRow.put(s, SFParameterEncoder.toJson(date));
     }
 
     @Override
@@ -716,7 +716,7 @@ public class SFResultSet implements ResultSet {
         if (time == null)
             updateNull(s);
         else
-            updateRow.put(s, SFPreparedStatement.formatDate(time, "yyyy-MM-dd'T'HH:mm:ss.SSSZ"));
+            updateRow.put(s, SFParameterEncoder.toJson(time));
     }
 
     @Override
@@ -724,7 +724,7 @@ public class SFResultSet implements ResultSet {
         if (timestamp == null)
             updateNull(s);
         else
-            updateRow.put(s, SFPreparedStatement.formatDate(timestamp, "yyyy-MM-dd'T'HH:mm:ss.SSSZ"));
+            updateRow.put(s, SFParameterEncoder.toJson(timestamp));
     }
 
     @Override

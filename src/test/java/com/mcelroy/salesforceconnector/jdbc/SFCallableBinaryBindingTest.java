@@ -83,10 +83,10 @@ public class SFCallableBinaryBindingTest {
     }
 
     private void assertDates(JSONObject values, Date date, Time time, Timestamp stamp) {
-        assertEquals(SFPreparedStatement.formatDate(date, "yyyy-MM-dd"), values.getString("date"));
-        assertEquals(SFPreparedStatement.formatDate(time, "yyyy-MM-dd'T'HH:mm:ss.SSSZ"),
+        assertEquals(SFParameterEncoder.formatDate(date, "yyyy-MM-dd"), values.getString("date"));
+        assertEquals(SFParameterEncoder.formatDate(time, "yyyy-MM-dd'T'HH:mm:ss.SSSZ"),
                 values.getString("time"));
-        assertEquals(SFPreparedStatement.formatDate(stamp, "yyyy-MM-dd'T'HH:mm:ss.SSSZ"),
+        assertEquals(SFParameterEncoder.formatDate(stamp, "yyyy-MM-dd'T'HH:mm:ss.SSSZ"),
                 values.getString("stamp"));
     }
 

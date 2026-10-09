@@ -235,7 +235,7 @@ public class SFParameterEncodingBaselineTest {
             for (boolean typed : new boolean[]{false, true}) {
                 SFCallableStatement statement = new SFCallableStatement(connection, client,
                         "call MyFlow(record, items, bean)");
-                Object[] objects = {map, list, new FlowBean()};
+                Object[] objects = {map, list, new JSONObject(new FlowBean())};
                 String[] names = {"record", "items", "bean"};
                 for (int i = 0; i < objects.length; i++) {
                     if (named && typed) statement.setObject(names[i], objects[i], Types.JAVA_OBJECT);

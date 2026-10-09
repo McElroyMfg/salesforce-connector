@@ -3,7 +3,6 @@
 package com.mcelroy.salesforceconnector.jdbc;
 
 import com.mcelroy.salesforceconnector.parser.node.SQL_Statement;
-import com.mcelroy.salesforceconnector.parser.node.SQL_Insert_Statement;
 import com.mcelroy.salesforceconnector.parser.node.SQL_Select_Statement;
 import com.mcelroy.salesforceconnector.rest.SFClientConnection;
 import org.json.JSONObject;
@@ -13,20 +12,16 @@ import java.io.Reader;
 import java.math.BigDecimal;
 import java.net.URL;
 import java.sql.*;
-import java.text.SimpleDateFormat;
 import java.util.Calendar;
-import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 
 public class SFPreparedStatement extends SFStatement implements PreparedStatement {
     private SQL_Statement sql_statement;
-    protected Map<Integer, String> params = new HashMap<>();
-    protected Map<Integer, Object> rawParams = new HashMap<>();
+    protected Map<Integer, Object> params = new HashMap<>();
 
-    protected void bind(int i, String literal, Object raw) {
-        params.put(i, literal);
-        rawParams.put(i, raw);
+    protected void bind(int i, Object value) {
+        params.put(i, value == null ? JSONObject.NULL : value);
     }
 
     public SFPreparedStatement(SFConnection sfConnection, SFClientConnection apiConnection, String sql) {
@@ -49,18 +44,17 @@ public class SFPreparedStatement extends SFStatement implements PreparedStatemen
 
     @Override
     public void setNull(int i, int i1) throws SQLException {
-        bind(i, "null", JSONObject.NULL);
+        bind(i, null);
     }
 
     @Override
     public void setBoolean(int i, boolean b) throws SQLException {
-        bind(i, b ? "true" : "false", b);
+        bind(i, b);
     }
 
     @Override
     public void setByte(int i, byte b) throws SQLException {
-        setString(i, "" + b);
-        rawParams.put(i, b);
+        bind(i, b);
     }
 
     @Override
@@ -75,7 +69,7 @@ public class SFPreparedStatement extends SFStatement implements PreparedStatemen
 
     @Override
     public void setLong(int i, long l) throws SQLException {
-        bind(i, ((Long) l).toString(), l);
+        bind(i, l);
     }
 
     @Override
@@ -85,69 +79,41 @@ public class SFPreparedStatement extends SFStatement implements PreparedStatemen
 
     @Override
     public void setDouble(int i, double v) throws SQLException {
-        bind(i, ((Double) v).toString(), v);
+        bind(i, v);
     }
 
     @Override
     public void setBigDecimal(int i, BigDecimal bigDecimal) throws SQLException {
-        if (bigDecimal == null) {
-            setNull(i, 0);
-            return;
-        }
-        bind(i, bigDecimal.toString(), bigDecimal);
+        bind(i, bigDecimal);
     }
 
     @Override
     public void setString(int i, String s) throws SQLException {
-        String literal = s.replace("\\", "\\\\").replace("'", "\\'");
-        bind(i, "'" + literal + "'", s);
+        bind(i, s);
     }
 
     @Override
     public void setBytes(int i, byte[] bytes) throws SQLException {
-        if (sql_statement instanceof SQL_Select_Statement) {
+        if (sql_statement instanceof SQL_Select_Statement)
             // Preserve legacy SELECT literals; INSERT and Flow bindings use Base64.
             setString(i, "" + bytes);
-            rawParams.put(i, bytes == null ? JSONObject.NULL : bytes);
-        } else if (bytes == null)
-            setNull(i, 0);
         else
-            bind(i, "'" + Base64.getEncoder().encodeToString(bytes) + "'", bytes);
-    }
-
-    public static String formatDate(java.util.Date date, String fmt) {
-        SimpleDateFormat df = new SimpleDateFormat(fmt);
-        return df.format(date);
+            bind(i, bytes);
     }
 
     @Override
     public void setDate(int i, Date date) throws SQLException {
-        if (date == null)
-            setNull(i, 0);
-        else {
-            String formatted = formatDate(date, "yyyy-MM-dd");
-            bind(i, formatted, formatted);
-        }
+        bind(i, date);
     }
 
     @Override
     public void setTime(int i, Time time) throws SQLException {
-        if (time == null)
-            setNull(i, 0);
-        else {
-            String formatted = formatDate(time, "yyyy-MM-dd'T'HH:mm:ss.SSSZ");
-            bind(i, formatted, formatted);
-        }
+        bind(i, time);
     }
 
     @Override
     public void setTimestamp(int i, Timestamp timestamp) throws SQLException {
-        if (timestamp == null)
-            setNull(i, 0);
-        else {
-            String formatted = formatDate(timestamp, "yyyy-MM-dd'T'HH:mm:ss.SSSZ");
-            bind(i, formatted, formatted);
-        }
+        bind(i, timestamp);
     }
 
     @Override
@@ -168,7 +134,6 @@ public class SFPreparedStatement extends SFStatement implements PreparedStatemen
     @Override
     public void clearParameters() throws SQLException {
         params.clear();
-        rawParams.clear();
     }
 
     @Override
@@ -213,27 +178,13 @@ public class SFPreparedStatement extends SFStatement implements PreparedStatemen
         else if (o instanceof Blob)
             setBlob(i, (Blob) o);
         else
-            setString(i, o.toString());
+            bind(i, o);
     }
 
     @Override
     public boolean execute() throws SQLException {
-        resetExecution();
-        if (sql_statement instanceof SQL_Insert_Statement) {
-            SQL_Insert_Statement insert = (SQL_Insert_Statement) sql_statement;
-            Map<String, Object> row = SFBinaryFields.prepare((SFConnection) getConnection(),
-                    getApiConnection(), insert.getTable(), insert.bind(rawParams));
-            try {
-                JSONObject response = getApiConnection().insert(insert.getTable(), new JSONObject(row).toString());
-                generatedId = response.optString("id", null);
-                updateCount = 1;
-                return false;
-            } catch (RuntimeException e) {
-                throw new SQLException(e.getMessage(), e);
-            }
-        }
         execute(sql_statement, params);
-        return true;
+        return getResultSet() != null;
     }
 
     @Override

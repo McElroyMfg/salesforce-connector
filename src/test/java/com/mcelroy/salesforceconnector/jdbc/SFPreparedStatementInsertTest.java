@@ -263,13 +263,13 @@ public class SFPreparedStatementInsertTest {
                 {Float.valueOf(1.25f), Double.valueOf(1.25)},
                 {Byte.valueOf((byte) -7), Integer.valueOf(-7)},
                 {new java.sql.Timestamp(instant),
-                        SFPreparedStatement.formatDate(new java.sql.Timestamp(instant), "yyyy-MM-dd'T'HH:mm:ss.SSSZ")},
+                        SFParameterEncoder.formatDate(new java.sql.Timestamp(instant), "yyyy-MM-dd'T'HH:mm:ss.SSSZ")},
                 {new java.sql.Time(instant),
-                        SFPreparedStatement.formatDate(new java.sql.Time(instant), "yyyy-MM-dd'T'HH:mm:ss.SSSZ")},
+                        SFParameterEncoder.formatDate(new java.sql.Time(instant), "yyyy-MM-dd'T'HH:mm:ss.SSSZ")},
                 {new java.sql.Date(instant),
-                        SFPreparedStatement.formatDate(new java.sql.Date(instant), "yyyy-MM-dd")},
+                        SFParameterEncoder.formatDate(new java.sql.Date(instant), "yyyy-MM-dd")},
                 {new java.util.Date(instant),
-                        SFPreparedStatement.formatDate(new java.util.Date(instant), "yyyy-MM-dd")},
+                        SFParameterEncoder.formatDate(new java.util.Date(instant), "yyyy-MM-dd")},
                 {new Object() {
                     @Override
                     public String toString() {
