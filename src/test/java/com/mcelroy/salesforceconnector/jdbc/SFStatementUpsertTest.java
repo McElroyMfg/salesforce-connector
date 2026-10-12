@@ -133,7 +133,7 @@ public class SFStatementUpsertTest {
                 "HTTP 300: Multiple records matched the external ID.",
                 "HTTP 404: Invalid external ID field"}) {
             RuntimeException original = new RuntimeException(message);
-            when(api.upsert(anyString(), anyString(), anyString(), anyString())).thenThrow(original);
+            doThrow(original).when(api).upsert(anyString(), anyString(), anyString(), anyString());
             try {
                 statement.executeUpdate();
                 fail("Accepted REST failure");

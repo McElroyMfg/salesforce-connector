@@ -167,17 +167,22 @@ public class SFRestConnection {
 
 
     public JSONObject postJSON(String urlString, String data) throws Exception {
-        return sendJSON("POST", urlString, data, false);
+        return sendJSON("POST", urlString, data);
     }
 
 
     public JSONObject patchJSON(String urlString, String data) throws Exception {
-        // Fix for Java not supporting PATCH
-        return sendJSON("POST", urlString + "?_HttpMethod=PATCH", data, true);
+        return sendJSON("PATCH", urlString, data);
     }
 
 
-    private JSONObject sendJSON(String method, String urlString, String data, boolean patch) throws Exception {
+    private JSONObject sendJSON(String method, String urlString, String data) throws Exception {
+        boolean patch = "PATCH".equals(method);
+        if (patch) {
+            method = "POST";
+            urlString += (urlString.contains("?") ? "&" : "?") + "_HttpMethod=PATCH";
+        }
+
         SFRestResponse restResponse;
         int tries = 0;
         do {
