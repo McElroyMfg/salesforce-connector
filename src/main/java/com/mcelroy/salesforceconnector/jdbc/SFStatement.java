@@ -4,8 +4,9 @@ package com.mcelroy.salesforceconnector.jdbc;
 
 import com.mcelroy.salesforceconnector.parser.node.SQL_Call_Statement;
 import com.mcelroy.salesforceconnector.parser.node.SQL_Catalog_Statement;
-import com.mcelroy.salesforceconnector.parser.node.SQL_Insert_Statement;
+import com.mcelroy.salesforceconnector.parser.node.SQL_Upsert_Statement;
 import com.mcelroy.salesforceconnector.parser.node.SQL_Statement;
+import com.mcelroy.salesforceconnector.parser.node.SQL_Write_Statement;
 import com.mcelroy.salesforceconnector.parser.visitor.SOQL_Writer;
 import com.mcelroy.salesforceconnector.parser.visitor.SQL_Placeholder_Replacer;
 import com.mcelroy.salesforceconnector.parser.visitor.SQL_Visitor;
@@ -16,6 +17,7 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 public class SFStatement implements Statement {
@@ -45,14 +47,31 @@ public class SFStatement implements Statement {
         resetExecution();
         if (sql_statement instanceof SQL_Call_Statement)
             throw new SQLFeatureNotSupportedException("Use prepareCall for CALL statements");
-        if (sql_statement instanceof SQL_Insert_Statement) {
-            SQL_Insert_Statement insert = (SQL_Insert_Statement) sql_statement;
-            Map<String, Object> row = SFBinaryFields.prepare(sfConnection, apiConnection,
-                    insert.getTable(), insert.bind(placeholderValues));
+        if (sql_statement instanceof SQL_Write_Statement) {
+            SQL_Write_Statement write = (SQL_Write_Statement) sql_statement;
+            boolean upsert = write instanceof SQL_Upsert_Statement;
+            String externalIdField = null;
+            String externalId = null;
+            Map<String, Object> row = write.bind(placeholderValues);
+            if (upsert) {
+                SQL_Upsert_Statement upsertStatement = (SQL_Upsert_Statement) write;
+                externalIdField = upsertStatement.getExternalIdField();
+                Object key = row.remove(externalIdField);
+                if (key == null || key == JSONObject.NULL || key.toString().isEmpty())
+                    throw new SQLException("UPSERT external ID must not be null or empty");
+                externalId = key.toString();
+            }
+            row = SFBinaryFields.prepare(sfConnection, apiConnection, write.getTable(), row);
             row.replaceAll((field, value) -> SFParameterEncoder.toJson(value));
             try {
-                JSONObject response = apiConnection.insert(insert.getTable(), new JSONObject(row).toString());
-                generatedId = response.optString("id", null);
+                JSONObject response;
+                if (upsert) {
+                    response = apiConnection.upsert(write.getTable(), externalIdField,
+                            externalId, new JSONObject(row).toString());
+                } else {
+                    response = apiConnection.insert(write.getTable(), new JSONObject(row).toString());
+                }
+                generatedId = response == null ? null : response.optString("id", null);
                 updateCount = 1;
                 return null;
             } catch (RuntimeException e) {
@@ -84,7 +103,15 @@ public class SFStatement implements Statement {
     @Override
     public int executeUpdate(String s) throws SQLException {
         resetExecution();
-        String sl = s.trim().toLowerCase();
+        String sl = s.trim().toLowerCase(Locale.ROOT);
+        if (sl.startsWith("insert") || sl.startsWith("upsert")) {
+            try {
+                execute(SQL_Statement.parse(s), null);
+                return updateCount;
+            } catch (RuntimeException e) {
+                throw new SQLException(e.getMessage(), e);
+            }
+        }
         if (sl.startsWith("catalog")) {
             String[] parts = sl.replaceAll(" +", " ").split(" ");
             if (parts.length == 2 && !parts[1].trim().equals("null")) {
@@ -161,7 +188,7 @@ public class SFStatement implements Statement {
     @Override
     public boolean execute(String s) throws SQLException {
         if (s != null) {
-            String sl = s.trim().toLowerCase();
+            String sl = s.trim().toLowerCase(Locale.ROOT);
 
             if (sl.startsWith("select")) {
                 executeQuery(s);
@@ -266,19 +293,19 @@ public class SFStatement implements Statement {
     @Override
     public int executeUpdate(String s, int i) throws SQLException {
         execute(s);
-        return 0;
+        return Math.max(0, getUpdateCount());
     }
 
     @Override
     public int executeUpdate(String s, int[] ints) throws SQLException {
         execute(s);
-        return 0;
+        return Math.max(0, getUpdateCount());
     }
 
     @Override
     public int executeUpdate(String s, String[] strings) throws SQLException {
         execute(s);
-        return 0;
+        return Math.max(0, getUpdateCount());
     }
 
     @Override

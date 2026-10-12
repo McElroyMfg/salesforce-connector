@@ -5,6 +5,7 @@ package com.mcelroy.salesforceconnector.rest;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -130,6 +131,16 @@ public class SFClientConnection {
         } catch (Exception e) {
             e.printStackTrace();
             throw new RuntimeException(e);
+        }
+    }
+
+    public JSONObject upsert(String object, String externalIdField, String externalIdValue, String body) {
+        try {
+            String key = URLEncoder.encode(externalIdValue, "UTF-8").replace("+", "%20");
+            return connection.patchJSON(connection.getServiceUrl() + "sobjects/" + object + "/"
+                    + externalIdField + "/" + key, body);
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage(), e);
         }
     }
 
