@@ -51,7 +51,8 @@ The contents of `private_key.pem` (including the `-----BEGIN PRIVATE KEY-----` a
 `-----END PRIVATE KEY-----` lines) are what you pass as the `privateKey` property.
 
 #### JDBC
-Handles queries with optional column and table alias and single-row `INSERT INTO ... VALUES ...` and `UPSERT` statements
+Handles queries with optional column and table alias, single- and multi-row `INSERT INTO ... VALUES ...` and `UPSERT`
+statements (multi-row and batched writes use the sObject Collections API),
 and stored procedures (Salesforce custom action flows.)
 
 Now supports row updates and inserts from the ResultSet.
@@ -75,7 +76,66 @@ UPSERT uses the Salesforce REST upsert endpoint to create or update one record.
 with an update count of `1`. `getGeneratedKeys()` exposes the Salesforce `Id` when
 returned by the API; an update without an ID returns an empty keys result set.
 Multiple matches (HTTP 300) and invalid external ID fields (HTTP 404) raise
-`SQLException`. Composite/bulk upsert is not supported.
+`SQLException`.
+
+##### Multi-row VALUES
+A single INSERT or UPSERT may list several rows:
+
+```sql
+INSERT INTO Account (Name, Phone) VALUES ('Acme', '555-0100'), ('Globex', ?), (?, null);
+UPSERT INTO Account (External_Id__c, Name) VALUES (?, ?), (?, ?) ON External_Id__c;
+```
+
+Placeholders are numbered left to right across all rows (the example INSERT has
+parameters 1 and 2). Every row is bound and validated before anything is sent; a
+missing parameter or an empty UPSERT key fails the statement with no records
+written (`Row <n>: ...`). Rows are then sent with the sObject Collections API,
+split automatically into requests of up to 200 records, so any number of rows may
+be listed. Saving is not atomic: valid rows are saved even if others are rejected.
+If any row fails, `SQLException` lists each failure (`Row <n>: <statusCode>: <message>`);
+`getUpdateCount()` and `getGeneratedKeys()` then reflect the rows that were saved.
+On success `executeUpdate()` returns the number of rows and `getGeneratedKeys()`
+returns their IDs in order. A one-row statement still uses the single-record
+endpoint described above.
+
+##### Batch INSERT and UPSERT
+`PreparedStatement.addBatch()` and `Statement.addBatch(String)` queue INSERT and
+UPSERT statements. `executeBatch()` sends consecutive writes to the same table
+(and, for UPSERT, the same `ON` field) through the Salesforce sObject Collections
+API in requests of up to 200 records:
+
+```java
+try (PreparedStatement ps = conn.prepareStatement(
+        "UPSERT INTO Account (External_Id__c, Name) VALUES (?, ?) ON External_Id__c",
+        Statement.RETURN_GENERATED_KEYS)) {
+    for (Row row : rows) {
+        ps.setString(1, row.key);
+        ps.setString(2, row.name);
+        ps.addBatch();
+    }
+    int[] counts = ps.executeBatch(); // 1 per saved record
+}
+```
+
+- Requests use `allOrNone=false`: a failed record does not roll back the others.
+  When any entry fails, processing continues and a `BatchUpdateException` is
+  thrown whose `getUpdateCounts()` has `1` for saved entries and
+  `Statement.EXECUTE_FAILED` for failed ones; the message lists each failure
+  (`Batch entry <index>: <statusCode>: <message>`).
+- Splitting at 200 is automatic: queue any number of rows and call
+  `executeBatch()` once. Rows of multi-row `VALUES` entries share requests with
+  neighbouring entries; such an entry's count is its number of rows, or
+  `EXECUTE_FAILED` if any of its rows failed (`Batch entry <index> row <n>: ...`).
+- UPSERT keeps the external ID in each record body. Records that repeat an
+  external ID already in the current request (compared case-insensitively) start
+  a new request, because Salesforce rejects duplicate keys within one request.
+- Rows containing binary data are sent individually with the single-record
+  endpoint to keep request sizes small. Ordering is preserved.
+- Other statements in a `Statement` batch run individually via `executeUpdate`;
+  SELECT statements are not allowed in a batch and are reported as failed.
+- `getGeneratedKeys()` after `executeBatch()` returns the Salesforce `Id` of each
+  saved record, in batch order (failed entries are omitted).
+- The batch is cleared after `executeBatch()`, whether it succeeds or fails.
 
 ##### File uploads and generated keys
 Binary parameters (`setBytes`, `setBinaryStream`, `setBlob`, or binary `setObject`)

@@ -788,6 +788,7 @@ public class SFResultSet implements ResultSet {
     @Override
     public void insertRow() throws SQLException {
         statement.generatedId = null;
+        statement.generatedIds = null;
         try {
             JSONObject jo = new JSONObject(SFBinaryFields.prepare((SFConnection) statement.getConnection(),
                     statement.getApiConnection(), tableName, updateRow));

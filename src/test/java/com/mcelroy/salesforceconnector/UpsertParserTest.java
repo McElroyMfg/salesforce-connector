@@ -66,7 +66,8 @@ public class UpsertParserTest {
                 "UPSERT INTO Account (Id) VALUES (?) ON Id.Name",
                 "UPSERT INTO Account (Id) VALUES (?) ON 'Id'",
                 "UPSERT INTO Account (Id) VALUES (?) ON Id; SELECT Id FROM Account",
-                "UPSERT INTO Account (Id) VALUES (?),(?) ON Id",
+                "UPSERT INTO Account (Id) VALUES (?),(?, ?) ON Id",
+                "UPSERT INTO Account (Id) VALUES (?), ON Id",
                 "UPSERT INTO Account (Id) VALUES (?) ON Id;;"
         };
         for (String sql : statements) {
@@ -77,5 +78,19 @@ public class UpsertParserTest {
                 // Reject invalid SQL before making a REST request.
             }
         }
+    }
+
+    @Test
+    public void multiRowUpsertParsesOnClauseAfterAllRows() throws SQLException {
+        SQL_Upsert_Statement statement = (SQL_Upsert_Statement) SQL_Statement.parse(
+                "UPSERT INTO Account (External_Id__c, Name) VALUES ('a', ?), (?, 'B') ON External_Id__c");
+        assertEquals(2, statement.getRowCount());
+        Map<Integer, Object> parameters = new HashMap<>();
+        parameters.put(1, "A");
+        parameters.put(2, "b");
+        assertEquals("a", statement.bind(0, parameters).get("External_Id__c"));
+        assertEquals("A", statement.bind(0, parameters).get("Name"));
+        assertEquals("b", statement.bind(1, parameters).get("External_Id__c"));
+        assertEquals("B", statement.bind(1, parameters).get("Name"));
     }
 }

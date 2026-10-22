@@ -30,7 +30,8 @@ public abstract class SQL_Write_Statement extends SQL_Statement {
 
     private final String table;
     protected final SQL_Column_List columns;
-    private final List<SQL_Node> values = new ArrayList<>();
+    private final List<List<SQL_Node>> rows = new ArrayList<>();
+    private final List<Integer> parameterOffsets = new ArrayList<>();
     private final String operation;
 
     protected SQL_Write_Statement(SQL_Token.SQL_TokenIterator tokenIterator, String operation) {
@@ -50,15 +51,28 @@ public abstract class SQL_Write_Statement extends SQL_Statement {
         }
 
         expectWord(tokenIterator, "VALUES");
-        tokenIterator.get(GROUP_OPEN);
-        SQL_Token separator;
-        do {
-            values.add(value(tokenIterator));
-            separator = tokenIterator.get(COMMA, GROUP_CLOSE);
-        } while (separator.is(COMMA));
-
-        if (columns.getColumns().size() != values.size())
-            throw new IllegalArgumentException(operation + " column and value counts do not match");
+        int parameters = 0;
+        while (true) {
+            tokenIterator.get(GROUP_OPEN);
+            List<SQL_Node> values = new ArrayList<>();
+            SQL_Token separator;
+            do {
+                values.add(value(tokenIterator));
+                separator = tokenIterator.get(COMMA, GROUP_CLOSE);
+            } while (separator.is(COMMA));
+            if (columns.getColumns().size() != values.size())
+                throw new IllegalArgumentException(operation + " column and value counts do not match"
+                        + (rows.isEmpty() ? "" : " in row " + (rows.size() + 1)));
+            rows.add(values);
+            parameterOffsets.add(parameters);
+            for (SQL_Node value : values)
+                if (value instanceof SQL_Placeholder)
+                    parameters++;
+            SQL_Token next = tokenIterator.peek();
+            if (next == null || !next.is(COMMA))
+                break;
+            tokenIterator.next();
+        }
     }
 
     protected void endStatement(SQL_Token.SQL_TokenIterator tokenIterator) {
@@ -73,9 +87,26 @@ public abstract class SQL_Write_Statement extends SQL_Statement {
         return table;
     }
 
+    /** Number of rows in the VALUES clause. */
+    public int getRowCount() {
+        return rows.size();
+    }
+
+    /** Binds a single-row statement. Use {@link #bind(int, Map)} for multi-row statements. */
     public LinkedHashMap<String, Object> bind(Map<Integer, Object> parameters) throws SQLException {
+        if (rows.size() != 1)
+            throw new SQLException(operation + " has " + rows.size() + " rows; bind each row by index");
+        return bind(0, parameters);
+    }
+
+    /**
+     * Binds one VALUES row. Placeholders are numbered left to right across all rows,
+     * so the first placeholder of a row continues from the last placeholder of the previous row.
+     */
+    public LinkedHashMap<String, Object> bind(int row, Map<Integer, Object> parameters) throws SQLException {
+        List<SQL_Node> values = rows.get(row);
         LinkedHashMap<String, Object> record = new LinkedHashMap<>();
-        int parameter = 0;
+        int parameter = parameterOffsets.get(row);
         for (int i = 0; i < values.size(); i++) {
             SQL_Node node = values.get(i);
             Object value;
@@ -98,8 +129,9 @@ public abstract class SQL_Write_Statement extends SQL_Statement {
     public void accept(SQL_Visitor visitor) {
         super.accept(visitor);
         columns.accept(visitor);
-        for (SQL_Node value : values)
-            value.accept(visitor);
+        for (List<SQL_Node> values : rows)
+            for (SQL_Node value : values)
+                value.accept(visitor);
         super.leave(visitor);
     }
 
@@ -178,6 +210,6 @@ public abstract class SQL_Write_Statement extends SQL_Statement {
 
     private static IllegalArgumentException invalid() {
         return new IllegalArgumentException(
-                "Expected INTO table (columns) VALUES (placeholders or literals)");
+                "Expected INTO table (columns) VALUES (placeholders or literals)[, (...)]");
     }
 }

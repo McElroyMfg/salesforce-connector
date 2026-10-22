@@ -4,6 +4,7 @@ package com.mcelroy.salesforceconnector.jdbc;
 
 import com.mcelroy.salesforceconnector.parser.node.SQL_Statement;
 import com.mcelroy.salesforceconnector.parser.node.SQL_Select_Statement;
+import com.mcelroy.salesforceconnector.parser.node.SQL_Write_Statement;
 import com.mcelroy.salesforceconnector.rest.SFClientConnection;
 import org.json.JSONObject;
 
@@ -192,7 +193,9 @@ public class SFPreparedStatement extends SFStatement implements PreparedStatemen
 
     @Override
     public void addBatch() throws SQLException {
-        throw new SQLFeatureNotSupportedException("Not Supported");
+        if (!(sql_statement instanceof SQL_Write_Statement))
+            throw new SQLFeatureNotSupportedException("Batch execution supports INSERT and UPSERT statements only");
+        addBatch((SQL_Write_Statement) sql_statement, params);
     }
 
     @Override
