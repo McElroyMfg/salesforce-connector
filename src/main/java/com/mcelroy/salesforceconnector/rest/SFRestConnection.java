@@ -176,9 +176,44 @@ public class SFRestConnection {
     }
 
 
+    public JSONArray postJSONArray(String urlString, String data) throws Exception {
+        return sendJSONArray("POST", urlString, data);
+    }
+
+
+    public JSONArray patchJSONArray(String urlString, String data) throws Exception {
+        return sendJSONArray("PATCH", urlString, data);
+    }
+
+
     private JSONObject sendJSON(String method, String urlString, String data) throws Exception {
         boolean patch = "PATCH".equals(method);
-        if (patch) {
+        SFRestResponse restResponse = sendChecked(method, urlString, data);
+        if (patch && restResponse.response.trim().isEmpty())
+            return new JSONObject().put("created", restResponse.status == 201);
+        if (restResponse.response.startsWith("{")) {
+            JSONObject result = new JSONObject(restResponse.response);
+            if (patch && !result.has("created"))
+                result.put("created", restResponse.status == 201);
+            return result;
+        } else if (restResponse.response.startsWith("[")) {
+            JSONArray a = new JSONArray(restResponse.response);
+            return a.getJSONObject(0);
+        } else
+            return null;
+    }
+
+
+    private JSONArray sendJSONArray(String method, String urlString, String data) throws Exception {
+        String response = sendChecked(method, urlString, data).response.trim();
+        if (response.startsWith("["))
+            return new JSONArray(response);
+        throw new Exception("Expected JSON array response: " + response);
+    }
+
+
+    private SFRestResponse sendChecked(String method, String urlString, String data) throws Exception {
+        if ("PATCH".equals(method)) {
             method = "POST";
             urlString += (urlString.contains("?") ? "&" : "?") + "_HttpMethod=PATCH";
         }
@@ -191,21 +226,8 @@ public class SFRestConnection {
                 connect();
             else if (restResponse.isError)
                 throw new Exception(restResponse.response);
-            else {
-                if (patch && restResponse.response.trim().isEmpty())
-                    return new JSONObject().put("created", restResponse.status == 201);
-                if (restResponse.response.startsWith("{")) {
-                    JSONObject result = new JSONObject(restResponse.response);
-                    if (patch && !result.has("created"))
-                        result.put("created", restResponse.status == 201);
-                    return result;
-                }
-                else if (restResponse.response.startsWith("[")) {
-                    JSONArray a = new JSONArray(restResponse.response);
-                    return a.getJSONObject(0);
-                } else
-                    return null;
-            }
+            else
+                return restResponse;
         } while (++tries < 2);
         throw new Exception(restResponse.response);
     }

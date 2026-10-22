@@ -145,6 +145,51 @@ public class SFClientConnection {
     }
 
 
+    /** Maximum records accepted by one sObject Collections request. */
+    public static final int COLLECTION_LIMIT = 200;
+
+    /**
+     * Creates up to {@link #COLLECTION_LIMIT} records with the sObject Collections API.
+     * Returns one save result per record, in request order.
+     */
+    public JSONArray insertCollection(String object, JSONArray records, boolean allOrNone) {
+        try {
+            return connection.postJSONArray(connection.getServiceUrl() + "composite/sobjects",
+                    collectionBody(object, records, allOrNone));
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Upserts up to {@link #COLLECTION_LIMIT} records with the sObject Collections API.
+     * Each record must contain its external ID field value.
+     */
+    public JSONArray upsertCollection(String object, String externalIdField, JSONArray records, boolean allOrNone) {
+        try {
+            return connection.patchJSONArray(connection.getServiceUrl() + "composite/sobjects/" + object + "/"
+                    + externalIdField, collectionBody(object, records, allOrNone));
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage(), e);
+        }
+    }
+
+    private static String collectionBody(String object, JSONArray records, boolean allOrNone) {
+        if (records.length() > COLLECTION_LIMIT)
+            throw new IllegalArgumentException("sObject Collections accept at most " + COLLECTION_LIMIT + " records");
+        JSONArray typed = new JSONArray();
+        for (int i = 0; i < records.length(); i++) {
+            JSONObject record = records.getJSONObject(i);
+            JSONObject copy = new JSONObject().put("attributes", new JSONObject().put("type", object));
+            for (String key : record.keySet())
+                if (!"attributes".equals(key))
+                    copy.put(key, record.get(key));
+            typed.put(copy);
+        }
+        return new JSONObject().put("allOrNone", allOrNone).put("records", typed).toString();
+    }
+
+
     public JSONObject launchFlow(String flowName, String statement) {
         try {
             return connection.postJSON(connection.getServiceUrl() + "actions/custom/flow/" + flowName, statement);

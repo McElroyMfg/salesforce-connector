@@ -155,7 +155,10 @@ public class InsertParserTest {
                 "INSERT INTO Account (Name) VALUES ('a' 'b')",
                 "INSERT INTO Account (Name) VALUES (x'a')",
                 "INSERT INTO Account (Name) VALUES (?) RETURNING Id",
-                "INSERT INTO Account (Name) VALUES (?),(?)",
+                "INSERT INTO Account (Name) VALUES (?),(?, ?)",
+                "INSERT INTO Account (Name) VALUES (?),",
+                "INSERT INTO Account (Name) VALUES (?) (?)",
+                "INSERT INTO Account (Name) VALUES (?),()",
                 "INSERT INTO Account (Name) VALUES (?); SELECT Id FROM Account",
                 "INSERT INTO Account (Name) VALUES (?);;",
                 "INSERT INTO Account (Name) VALUES (?) -- comment",
@@ -168,6 +171,47 @@ public class InsertParserTest {
             } catch (RuntimeException expected) {
                 // Parser failures must happen before record creation.
             }
+        }
+    }
+
+    @Test
+    public void multiRowValuesNumberPlaceholdersAcrossRows() throws SQLException {
+        SQL_Insert_Statement statement = parse(
+                "INSERT INTO Account (Name, Phone, Active__c) VALUES (?, ?, true), ('Literal', ?, false),(?, null, ?);");
+        assertEquals(3, statement.getRowCount());
+        Map<Integer, Object> parameters = new HashMap<>();
+        for (int i = 1; i <= 5; i++)
+            parameters.put(i, "p" + i);
+        assertEquals("p1", statement.bind(0, parameters).get("Name"));
+        assertEquals("p2", statement.bind(0, parameters).get("Phone"));
+        assertEquals(Boolean.TRUE, statement.bind(0, parameters).get("Active__c"));
+        assertEquals("Literal", statement.bind(1, parameters).get("Name"));
+        assertEquals("p3", statement.bind(1, parameters).get("Phone"));
+        assertEquals("p4", statement.bind(2, parameters).get("Name"));
+        assertSame(JSONObject.NULL, statement.bind(2, parameters).get("Phone"));
+        assertEquals("p5", statement.bind(2, parameters).get("Active__c"));
+        try {
+            statement.bind(parameters);
+            fail("Single-row bind accepted multi-row statement");
+        } catch (SQLException expected) {
+            assertTrue(expected.getMessage().contains("3 rows"));
+        }
+        parameters.remove(5);
+        try {
+            statement.bind(2, parameters);
+            fail("Accepted missing parameter");
+        } catch (SQLException expected) {
+            assertTrue(expected.getMessage().contains("parameter 5"));
+        }
+    }
+
+    @Test
+    public void multiRowCountMismatchNamesTheRow() {
+        try {
+            parse("INSERT INTO Account (Name, Phone) VALUES ('a', 'b'), ('c')");
+            fail("Accepted mismatched row");
+        } catch (IllegalArgumentException expected) {
+            assertTrue(expected.getMessage(), expected.getMessage().contains("in row 2"));
         }
     }
 }
