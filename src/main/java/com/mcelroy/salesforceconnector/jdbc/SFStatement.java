@@ -416,6 +416,8 @@ public class SFStatement implements Statement {
         /** @param rowNumber 1-based VALUES row, or 0 when the statement has a single row */
         void fail(int owner, int rowNumber, String message, Throwable cause) {
             failed[owner] = true;
+            if (message == null)
+                message = cause != null ? cause.toString() : "Unknown error";
             String label = batchMode
                     ? "Batch entry " + owner + (rowNumber > 0 ? " row " + rowNumber : "")
                     : "Row " + rowNumber;

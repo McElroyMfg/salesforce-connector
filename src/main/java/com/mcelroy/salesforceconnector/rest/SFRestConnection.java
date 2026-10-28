@@ -3,7 +3,6 @@
 package com.mcelroy.salesforceconnector.rest;
 
 import org.json.JSONArray;
-import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.*;
@@ -50,6 +49,7 @@ public class SFRestConnection {
 
     private final SFRestConfig config;
     private String token;
+    private volatile String loginError;
 
 
     public SFRestConnection(SFRestConfig config) {
@@ -88,11 +88,16 @@ public class SFRestConnection {
                     params.put("client_secret", config.clientSecret);
                 }
                 token = null;
-                JSONObject resp = logIn(config.host + "services/oauth2/token", params);
-                if (resp != null)
-                    config.accessToken = resp.getString("access_token");
+                SFRestResponse resp = logIn(config.host + "services/oauth2/token", "application/json", params);
+                if (resp.authException || resp.isError) {
+                    loginError = resp.response != null ? resp.response : "HTTP " + resp.status;
+                } else {
+                    config.accessToken = new JSONObject(resp.response).getString("access_token");
+                    loginError = null;
+                }
             } catch (Exception e) {
                 config.accessToken = null;
+                loginError = describe(e);
                 e.printStackTrace();
             }
         }
@@ -141,12 +146,16 @@ public class SFRestConnection {
     }
 
 
-    private JSONObject logIn(String urlString, Map<String, Object> params) throws JSONException {
-        SFRestResponse restResponse = logIn(urlString, "application/json", params);
-        if (restResponse.authException || restResponse.isError)
-            return null;
-        else
-            return new JSONObject(restResponse.response);
+    private static String describe(Throwable e) {
+        return e.getMessage() != null ? e.getMessage() : e.toString();
+    }
+
+
+    /** Message for a request still rejected after re-authenticating, including why login failed. */
+    private String authFailure(SFRestResponse restResponse) {
+        String message = restResponse.response != null ? restResponse.response : "HTTP " + restResponse.status;
+        String login = loginError;
+        return login == null ? message : message + " (re-login failed: " + login + ")";
     }
 
 
@@ -162,7 +171,7 @@ public class SFRestConnection {
             else
                 return new JSONObject(restResponse.response);
         } while (++tries < 2);
-        throw new Exception(restResponse.response);
+        throw new Exception(authFailure(restResponse));
     }
 
 
@@ -229,7 +238,7 @@ public class SFRestConnection {
             else
                 return restResponse;
         } while (++tries < 2);
-        throw new Exception(restResponse.response);
+        throw new Exception(authFailure(restResponse));
     }
 
 
@@ -304,11 +313,7 @@ public class SFRestConnection {
 
             int status = conn.getResponseCode();
             restResponse.status = status;
-
-            if (status == 401) {
-                restResponse.authException = true;
-                return restResponse;
-            }
+            restResponse.authException = status == 401;
 
             StringBuilder sb = new StringBuilder();
             InputStream stream = conn.getErrorStream();
@@ -333,7 +338,7 @@ public class SFRestConnection {
             restResponse.response = "Unknown host: " + e.getMessage();
         } catch (Exception e) {
             restResponse.isError = true;
-            restResponse.response = e.getMessage();
+            restResponse.response = describe(e);
         }
 
         return restResponse;
